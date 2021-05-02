@@ -56,7 +56,7 @@ def combs(n, m, nperm):
     trt = [[None]*m for i in np.arange(nperm)]
     Z = [[None]*n for i in np.arange(nperm)]
     for i in np.arange(nperm):
-        trt[i] = np.random.choice(n, m).tolist()
+        trt[i] = np.random.choice(n, m, replace=False).tolist()
     for i in np.arange(nperm):
-        Z[i] = [1 if j in trt[i] else 0 for j in np.arange(1, n+1)]
+        Z[i] = [1 if j in trt[i] else 0 for j in np.arange(n)]
     return Z

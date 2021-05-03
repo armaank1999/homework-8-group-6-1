@@ -571,3 +571,55 @@ def tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm):
         N_accept_upper = ci_lower[3]
     return (tau_lower, tau_upper, N_accept_lower, N_accept_upper,
             rand_test_total)
+
+
+def tau_twoside(n11, n10, n01, n00, alpha, nperm):
+    """
+    Calculate taus and N_accepts for method 3.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    alpha: float
+        1 - confidence level
+    nperm: int
+        maximum desired number of permutations
+
+    Returns
+    -------
+    tau_lower: float
+        left-side tau for final confidence interval
+    tau_upper: float
+        right-side tau for final confidence interval
+    N_accept_lower: list
+        left-side accepted potential table for final confidence interval
+    N_accept_upper: list
+        right-side accepted potential table for final confidence interval
+    rand_test_total: int
+        number of tests run
+    """
+    n = n11+n10+n01+n00
+    m = n11+n10
+    if m > (n/2):
+        ci = tau_twoside_less_treated(n01, n00, n11, n10, alpha, nperm)
+        tau_lower = -ci[1]
+        tau_upper = -ci[0]
+        N_accept_lower = ci[2]
+        N_accept_upper = ci[3]
+        rand_test_total = ci[4]
+    else:
+        ci = tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm)
+        tau_lower = ci[0]
+        tau_upper = ci[1]
+        N_accept_lower = ci[2]
+        N_accept_upper = ci[3]
+        rand_test_total = ci[4]
+    return (tau_lower, tau_upper, N_accept_lower, N_accept_upper,
+            rand_test_total)

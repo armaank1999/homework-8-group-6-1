@@ -516,3 +516,58 @@ def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all):
     N_accept_upper = N_accept_max
     return (tau_lower, N_accept_lower, tau_upper, N_accept_upper,
             rand_test_total)
+
+
+def tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm):
+    """
+    Calculate taus and N_accepts for method 3.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    alpha: float
+        1 - confidence level
+    nperm: int
+        maximum desired number of permutations
+
+    Returns
+    -------
+    tau_lower: float
+        left-side tau for final confidence interval
+    tau_upper: float
+        right-side tau for final confidence interval
+    N_accept_lower: list
+        left-side accepted potential table for final confidence interval
+    N_accept_upper: list
+        right-side accepted potential table for final confidence interval
+    rand_test_total: int
+        number of tests run
+    """
+    n = n11+n10+n01+n00
+    m = n11+n10
+    if comb(n, m) <= nperm:
+        Z_all = nchoosem(n, m)
+    else:
+        Z_all = combs(n, m, nperm)
+    ci_lower = tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all)
+    ci_upper = tau_twoside_lower(n10, n11, n00, n01, alpha, Z_all)
+    rand_test_total = ci_lower[4] + ci_upper[4]
+    tau_lower = min(ci_lower[0], -1*ci_upper[2])
+    tau_upper = max(ci_lower[2], -1*ci_upper[0])
+    if tau_lower == ci_lower[0]:
+        N_accept_lower = ci_lower[1]
+    else:
+        N_accept_lower = ci_upper[3][::-1]
+    if tau_upper == -1*ci_upper[0]:
+        N_accept_upper = ci_upper[1][::-1]
+    else:
+        N_accept_upper = ci_lower[3]
+    return (tau_lower, tau_upper, N_accept_lower, N_accept_upper,
+            rand_test_total)

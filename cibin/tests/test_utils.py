@@ -102,3 +102,21 @@ def test_tau_lower_N11_oneside():
     expected_N_accept = [10, 0, 3, 7]
     assert tau_min == expected_tau_min
     assert N_accept == expected_N_accept
+
+
+def test_tau_lower_oneside():
+    """Test that tau_lower_oneside returns correct taus and N_accept."""
+    n11 = 6
+    n10 = 4
+    n01 = 4
+    n00 = 6
+    alpha = 0.05
+    nperm = 1000
+    tau_lower, tau_upper, N_accept = tau_lower_oneside(n11, n10, n01, n00,
+                                                       alpha, nperm)
+    expected_tau_lower = -0.15
+    expected_tau_upper = 0.6
+    expected_N_accept = [5, 1, 4, 10]
+    assert tau_lower == expected_tau_lower
+    assert tau_upper == expected_tau_upper
+    assert N_accept == expected_N_accept

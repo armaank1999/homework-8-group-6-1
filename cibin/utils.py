@@ -6,9 +6,10 @@ bounds for the average treatment effect in a randomized experiment with binary
 outcomes and two treatments.
 """
 
+import numpy as np
+from scipy.stats import hypergeom
 from itertools import combinations
 from math import comb, floor
-import numpy as np
 
 
 def nchoosem(n, m):
@@ -698,25 +699,25 @@ def exact_CI_odd(N, n, x, alpha):
     ucin2 = uci(xx, n, alpha)
     lciw = lcin1
     uciw = ucin1
-    xvalue = floor(n/2)+1
+    xvalue = int(floor(n/2)+1)
     while xvalue > 0.5:
-        al = lcin2[int(xvalue)-1] - lciw[int(xvalue)-1] + 1
-        au = int(uciw[int(xvalue)-1] - ucin2[int(xvalue)-1] + 1)
+        al = lcin2[xvalue-1]-lciw[xvalue-1]+1
+        au = int(uciw[xvalue-1] - ucin2[xvalue-1]+1)
         if al*au > 1:
             gg = [[], [], [], []]
             for i in np.arange(al):
-                gg[0].append([lciw[int(xvalue)-1]+i]*au)
-                gg[1].append(list(np.arange(ucin2[int(xvalue)-1],
-                                            uciw[int(xvalue)-1]+1)))
+                gg[0].append([lciw[xvalue-1]+i]*au)
+                gg[1].append(list(np.arange(ucin2[xvalue-1],
+                                            uciw[xvalue-1]+1)))
             ff = [[], [], [], []]
             ff[0] = list(np.concatenate(gg[0]))
             ff[1] = list(np.concatenate(gg[1]))
             ff[2] = [ff[1][i] - ff[0][i] for i in np.arange(len(ff[0]))]
             for ii in np.arange(len(ff[0])):
-                lciw[int(xvalue)-1] = ff[0][ii]
-                uciw[int(xvalue)-1] = ff[1][ii]
-                lciw[n+2-int(xvalue)-1] = N - uciw[int(xvalue)-1]
-                uciw[n+2-int(xvalue)-1] = N - lciw[int(xvalue)-1]
+                lciw[xvalue-1] = ff[0][ii]
+                uciw[xvalue-1] = ff[1][ii]
+                lciw[n+1-xvalue] = N - uciw[xvalue-1]
+                uciw[n+1-xvalue] = N - lciw[xvalue-1]
 
                 def cpci(M):
                     kk = list(np.arange(len(M)))
@@ -736,13 +737,13 @@ def exact_CI_odd(N, n, x, alpha):
             ff[:] = [x for x in ff if x[3] >= (1-alpha)]
             if len(ff[0])*len(ff) > 4:
                 ff = sorted(ff, key=lambda x: x[2])
-                lciw[int(xvalue)-1] = ff[0][0]
-                uciw[int(xvalue)-1] = ff[0][1]
+                lciw[xvalue-1] = ff[0][0]
+                uciw[xvalue-1] = ff[0][1]
             else:
-                lciw[int(xvalue)-1] = ff[0][0]
-                uciw[int(xvalue)-1] = ff[0][1]
-            lciw[n+2-int(xvalue)-1] = N - uciw[int(xvalue)-1]
-            uciw[n+2-int(xvalue)-1] = N - lciw[int(xvalue)-1]
+                lciw[xvalue-1] = ff[0][0]
+                uciw[xvalue-1] = ff[0][1]
+            lciw[n+1-xvalue] = N - uciw[xvalue-1]
+            uciw[n+1-xvalue] = N - lciw[xvalue-1]
         xvalue = xvalue - 1
 
     def cpcig(M, lcin, ucin):
@@ -759,4 +760,187 @@ def exact_CI_odd(N, n, x, alpha):
         return kk
     lower = int([lciw[i] for i in xx if i == x][0])
     upper = int([uciw[i] for i in xx if i == x][0])
+    return [lower, upper]
+
+
+def exact_CI_even(N, n, x, alpha):
+    """
+    Calculate exact CI for even sample size.
+
+    Parameters
+    ----------
+    N: int
+        population size
+    n: int (even)
+        sample size
+    x: int
+        number of good items in the sample
+    alpha:
+        1 - confidence level
+
+    Returns
+    -------
+    lower: int
+        lower bound of confidence interval
+    upper: int
+        upper bound of confidence interval
+    """
+    def ind(x, a, b):
+        return (x >= a)*(x <= b)
+
+    def lci(x, n, alpha):
+        if isinstance(x, int):
+            xs = [x]
+        else:
+            xs = x
+        kk = np.arange(0, len(xs)).tolist()
+        for i in kk:
+            if xs[i] < 0.5:
+                kk[i] = 0
+            else:
+                aa = np.arange(0, N+1).tolist()
+                bb = [x+1 for x in aa]
+                bb[1:(N+1)] = hypergeom.cdf(xs[i]-1, N, [x-1 for x in
+                                                         aa[1:(N+1)]], n)
+                cc = []
+                cc.append(aa)
+                cc.append(bb)
+                inds = [i >= (1-alpha) for i in cc[1]]
+                dd = [[], []]
+                dd[0] = [cc[0][i] for i in np.arange(len(inds)) if inds[i]]
+                dd[1] = [cc[1][i] for i in np.arange(len(inds)) if inds[i]]
+                if len(dd[0])*len(dd) == 2:
+                    kk[i] = dd[1][0]
+                else:
+                    kk[i] = max(dd[0])
+        if isinstance(x, int):
+            return kk[0]
+        else:
+            return kk
+
+    def uci(x, n, alpha):
+        if isinstance(x, int):
+            xs = [x]
+        else:
+            xs = x
+        lcis = lci([n-i for i in xs], n, alpha)
+        upper = [N - i for i in lcis]
+        if isinstance(x, int):
+            return upper[0]
+        else:
+            return upper
+    xx = np.arange(n+1)
+    lcin1 = lci(xx, n, alpha/2)
+    ucin1 = uci(xx, n, alpha/2)
+    lcin2 = lci(xx, n, alpha)
+    ucin2 = uci(xx, n, alpha)
+    lciw = lcin1
+    uciw = ucin1
+    xvalue = int((n/2)+1)
+    aa = np.arange(lciw[xvalue-1], floor(N/2)+1)
+    ii = 1
+    while ii < (len(aa) + 0.5):
+        lciw[xvalue-1] = aa[ii - 1]
+        uciw[xvalue-1] = N - aa[ii - 1]
+
+        def cpci(M):
+            kk = list(np.arange(len(M)))
+            for i in kk:
+                xx = list(np.arange(n+1))
+                indp = xx
+                uu = 0
+                while (uu < n+0.5):
+                    indp[uu] = (ind(M[i], lciw[uu], uciw[uu]) *
+                                hypergeom.pmf(uu, N, M[i], n))
+                    uu += 1
+                kk[i] = sum(indp)
+            return kk
+        M = list(np.arange(N+1))
+        bb = min(cpci(M))
+        if (bb >= 1-alpha):
+            ii1 = ii
+            ii += 1
+        else:
+            ii = len(aa) + 1
+    lciw[xvalue-1] = aa[ii1-1]
+    uciw[xvalue-1] = N - lciw[xvalue-1]
+    xvalue = int(n/2)
+    while xvalue > 0.5:
+        al = lcin2[xvalue-1] - lciw[xvalue-1]+1
+        au = int(uciw[xvalue-1] - ucin2[xvalue-1]+1)
+        if al*au > 1:
+            gg = [[], [], [], []]
+            for i in np.arange(al):
+                gg[0].append([lciw[xvalue-1]+i]*au)
+                gg[1].append(list(np.arange(ucin2[xvalue-1],
+                                            uciw[xvalue-1]+1)))
+            ff = [[], [], [], []]
+            ff[0] = list(np.concatenate(gg[0]))
+            ff[1] = list(np.concatenate(gg[1]))
+            ff[2] = [ff[1][i] - ff[0][i] for i in np.arange(len(ff[0]))]
+            for ii in np.arange(len(ff[0])):
+                lciw[xvalue-1] = ff[0][ii]
+                uciw[xvalue-1] = ff[1][ii]
+                lciw[n+1-xvalue] = N - uciw[xvalue-1]
+                uciw[n+1-xvalue] = N - lciw[xvalue-1]
+
+                def cpci(M):
+                    kk = list(np.arange(len(M)))
+                    for i in kk:
+                        xx = list(np.arange(n+1))
+                        indp = xx
+                        uu = 0
+                        while (uu < n + 0.5):
+                            indp[uu] = (ind(M[i], lciw[uu], uciw[uu]) *
+                                        hypergeom.pmf(uu, N, M[i], n))
+                            uu += 1
+                        kk[i] = sum(indp)
+                    return kk
+                M = np.arange(N+1)
+                ff[3].append(min(cpci(M)))
+            ff = np.array(ff).T.tolist()
+            ff[:] = [x for x in ff if x[3] >= (1-alpha)]
+            if len(ff[0])*len(ff) > 4:
+                ff = sorted(ff, key=lambda x: x[2])
+                lciw[xvalue-1] = ff[0][0]
+                uciw[xvalue-1] = ff[0][1]
+            else:
+                lciw[xvalue-1] = ff[0][0]
+                uciw[xvalue-1] = ff[0][1]
+            lciw[n+1-xvalue] = N - uciw[xvalue-1]
+            uciw[n+1-xvalue] = N - lciw[xvalue-1]
+        xvalue = int(xvalue - 1)
+    lower = [lciw[i] for i in xx if i == x][0]
+    upper = [uciw[i] for i in xx if i == x][0]
+    return [lower, upper]
+
+
+def exact_CI(N, n, x, alpha):
+    """
+    Calculate exact CI for even or odd sample size.
+
+    Parameters
+    ----------
+    N: int
+        population size
+    n: int (even)
+        sample size
+    x: int
+        number of good items in the sample
+    alpha:
+        1 - confidence level
+
+    Returns
+    -------
+    lower: int
+        lower bound of confidence interval
+    upper: int
+        upper bound of confidence interval
+    """
+    if n % 2 == 1:
+        ci = exact_CI_odd(N, n, x, alpha)
+    else:
+        ci = exact_CI_even(N, n, x, alpha)
+    lower = int(ci[0])
+    upper = int(ci[1])
     return [lower, upper]

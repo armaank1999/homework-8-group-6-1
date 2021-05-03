@@ -325,11 +325,11 @@ def tau_lower_oneside(n11, n10, n01, n00, alpha, nperm):
     Returns
     -------
     tau_lower: float
-        left-side tau for final confidence interval
+        left-side tau for one-sided confidence interval
     tau_upper: float
-        right-side tau for final confidence interval
+        right-side tau for one-sided confidence interval
     N_accept:
-        accepted potential table for final confidence interval
+        accepted potential table for one-sided confidence interval
     """
     n = n11+n10+n01+n00
     m = n11+n10
@@ -482,13 +482,13 @@ def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all):
     Returns
     -------
     tau_lower: float
-        left-side tau for final confidence interval
+        left-side tau for two-sided confidence interval
     N_accept_lower: list
-        left-side accepted potential table for final confidence interval
+        left-side accepted potential table for two-sided confidence interval
     tau_upper: float
-        right-side tau for final confidence interval
+        right-side tau for two-sided confidence interval
     N_accept_upper: list
-        right-side accepted potential table for final confidence interval
+        right-side accepted potential table for two-sided confidence interval
     rand_test_total: int
         number of tests run
     """
@@ -541,13 +541,13 @@ def tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm):
     Returns
     -------
     tau_lower: float
-        left-side tau for final confidence interval
+        left-side tau for two-sided confidence interval
     tau_upper: float
-        right-side tau for final confidence interval
+        right-side tau for two-sided confidence interval
     N_accept_lower: list
-        left-side accepted potential table for final confidence interval
+        left-side accepted potential table for two-sided confidence interval
     N_accept_upper: list
-        right-side accepted potential table for final confidence interval
+        right-side accepted potential table for two-sided confidence interval
     rand_test_total: int
         number of tests run
     """
@@ -596,13 +596,13 @@ def tau_twoside(n11, n10, n01, n00, alpha, nperm):
     Returns
     -------
     tau_lower: float
-        left-side tau for final confidence interval
+        left-side tau for two-sided confidence interval
     tau_upper: float
-        right-side tau for final confidence interval
+        right-side tau for two-sided confidence interval
     N_accept_lower: list
-        left-side accepted potential table for final confidence interval
+        left-side accepted potential table for two-sided confidence interval
     N_accept_upper: list
-        right-side accepted potential table for final confidence interval
+        right-side accepted potential table for two-sided confidence interval
     rand_test_total: int
         number of tests run
     """
@@ -944,3 +944,36 @@ def exact_CI(N, n, x, alpha):
     lower = int(ci[0])
     upper = int(ci[1])
     return [lower, upper]
+
+
+def combin_exact_CI(n11, n10, n01, n00, alpha):
+    """
+    Calculate exact CI from observed table.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    alpha: float
+        1 - confidence level
+
+    Returns
+    -------
+    tau_lower: int
+        left-side tau for one-sided confidence interval
+    tau_upper: int
+        right-side tau for one-sided confidence interval
+    """
+    n = n11+n10+n01+n00
+    m = n11+n10
+    ci_1plus = exact_CI(N=n, n=m, x=n11, alpha=alpha/2)
+    ci_plus1 = exact_CI(N=n, n=(n-m), x=n01, alpha=alpha/2)
+    tau_upper = (ci_1plus[1]-ci_plus1[0])/n
+    tau_lower = (ci_1plus[0]-ci_plus1[1])/n
+    return tau_lower, tau_upper

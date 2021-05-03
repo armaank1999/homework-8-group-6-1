@@ -20,9 +20,10 @@ def nchoosem(n, m):
     n: int
         total number of subjects
     m: int
-        number of subjects with treatment
+        number of subjects under treatment
 
-    Returns:
+    Returns
+    -------
     Z: list
         re-randomization matrix
     """
@@ -44,7 +45,7 @@ def combs(n, m, nperm):
     n: int
         total number of subjects
     m: int
-        number of subjects with treatment
+        number of subjects under treatment
     nperm: int
         number of permutations
 
@@ -71,7 +72,7 @@ def pval_one_lower(n, m, N, Z_all, tau_obs):
     n: int
         total number of subjects
     m: int
-        number of subjects with treatment
+        number of subjects under treatment
     N: list
         potential table
     Z_all: list
@@ -79,8 +80,8 @@ def pval_one_lower(n, m, N, Z_all, tau_obs):
     tau_obs: float
         observed value of tau
 
-    Returns:
-    --------
+    Returns
+    -------
     pl: float
         p-value
     """
@@ -128,7 +129,7 @@ def pval_two(n, m, N, Z_all, tau_obs):
     n: int
         total number of subjects
     m: int
-        number of subjects with treatment
+        number of subjects under treatment
     N: list
         potential table
     Z_all: list
@@ -136,8 +137,8 @@ def pval_two(n, m, N, Z_all, tau_obs):
     tau_obs: float
         observed value of tau
 
-    Returns:
-    --------
+    Returns
+    -------
     pl: float
         p-value
     """
@@ -171,3 +172,46 @@ def pval_two(n, m, N, Z_all, tau_obs):
                  for i in np.arange(len(tau_hat))])
     pd = count/n_Z_all
     return pd
+
+
+def check_compatible(n11, n10, n01, n00, N11, N10, N01):
+    """
+    Check that observed table is compatible with potential table.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    N11: int
+        potential number of subjects under treatment that experienced
+        outcome 1
+    N10: int
+        potential number of subjects under treatment that experienced
+        outcome 0
+    N01: int
+        potential number of subjects under treatment that experienced
+        outcome 0
+    """
+    n = n11 + n10 + n01 + n00
+    n_t = len(N10)
+    lefts = [[] for i in np.arange(len(N10))]
+    rights = [[] for i in np.arange(len(N10))]
+    for i in np.arange(len(N10)):
+        lefts[i].append(0)
+        rights[i].append(N11[i])
+        lefts[i].append(n11 - N10[i])
+        rights[i].append(n11)
+        lefts[i].append(N11[i] - n01)
+        rights[i].append(N11[i] + N01[i] - n01)
+        lefts[i].append(N11[i] + N01[i] - n10 - n01)
+        rights[i].append(n - N10[i] - n01 - n10)
+    left = [max(x) for x in lefts]
+    right = [min(x) for x in rights]
+    compact = [left[i] <= right[i] for i in np.arange(len(left))]
+    return compact

@@ -182,3 +182,14 @@ def test_exact_CI_odd():
     CI_odd = exact_CI_odd(N, n, x, alpha)
     expected_CI_odd = [23, 41]
     assert CI_odd == expected_CI_odd
+
+
+def test_exact_CI_even():
+    """Test exact_CI_odd returns correct CI."""
+    N = 50
+    n = 14
+    x = 10
+    alpha = 0.05
+    CI_even = exact_CI_even(N, n, x, alpha)
+    expected_CI_even = [24, 43]
+    assert CI_even == expected_CI_even

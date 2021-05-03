@@ -71,7 +71,7 @@ def test_pval_two():
     assert pval == expected
 
 
-def check_compatible():
+def test_check_compatible():
     """Check that check_compatible returns correct list of booleans."""
     n11 = 6
     n10 = 4
@@ -83,3 +83,22 @@ def check_compatible():
     compatible = check_compatible(n11, n10, n01, n00, N11, N10, N01)
     expected = [True, True, False]
     assert compatible == expected
+
+
+def test_tau_lower_N11_oneside():
+    """Test that tau_lower_N11_oneside returns correct tau_min and N_accept."""
+    n11 = 6
+    n10 = 4
+    n01 = 4
+    n00 = 6
+    n = n11+n10+n01+n00
+    m = n11+n10
+    N11 = 10
+    Z_all = nchoosem(n, m)
+    alpha = 0.05
+    tau_min, N_accept = tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all,
+                                              alpha)
+    expected_tau_min = -0.15
+    expected_N_accept = [10, 0, 3, 7]
+    assert tau_min == expected_tau_min
+    assert N_accept == expected_N_accept

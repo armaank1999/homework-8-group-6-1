@@ -299,7 +299,7 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
     else:
         tau_min = (n11 + n00)/n
         N_accept = float('NaN')
-    return tau_min, N_accept
+    return (tau_min, N_accept)
 
 
 def tau_lower_oneside(n11, n10, n01, n00, alpha, nperm):
@@ -346,7 +346,7 @@ def tau_lower_oneside(n11, n10, n01, n00, alpha, nperm):
         tau_min = min(tau_min, tau_min_N11[0])
     tau_lower = tau_min
     tau_upper = (n11+n00)/n
-    return tau_lower, tau_upper, N_accept
+    return (tau_lower, tau_upper, N_accept)
 
 
 def tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha):
@@ -456,4 +456,63 @@ def tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha):
         N_accept_min = float('NaN')
         tau_max = float('-inf')
         N_accept_max = float('NaN')
-    return tau_min, tau_max, N_accept_min, N_accept_max, rand_test_num
+    return (tau_min, tau_max, N_accept_min, N_accept_max, rand_test_num)
+
+
+def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all):
+    """
+    Calculate taus and N_accepts for method 3.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    alpha: float
+        1 - confidence level
+    Z_all: list
+        re-randomization or sample of re-randomization matrix
+
+    Returns
+    -------
+    tau_lower: float
+        left-side tau for final confidence interval
+    N_accept_lower: list
+        left-side accepted potential table for final confidence interval
+    tau_upper: float
+        right-side tau for final confidence interval
+    N_accept_upper: list
+        right-side accepted potential table for final confidence interval
+    rand_test_total: int
+        number of tests run
+    """
+    n = n11+n10+n01+n00
+    m = n11+n10
+    tau_obs = n11/m - n01/(n-m)
+    ntau_obs = n*n11/m - n*n01/(n-m)
+    tau_min = float('inf')
+    tau_max = float('-inf')
+    N_accept_min = float('NaN')
+    N_accept_max = float('NaN')
+    rand_test_total = 0
+    for N11 in np.arange(int(min(n11+n01, n+ntau_obs))+1):
+        tau_min_N11 = tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all,
+                                            alpha)
+        rand_test_total = rand_test_total + tau_min_N11[4]
+        if tau_min_N11[0] < tau_min:
+            N_accept_min = tau_min_N11[2]
+        if tau_min_N11[1] > tau_max:
+            N_accept_max = tau_min_N11[3]
+        tau_min = min(tau_min, tau_min_N11[0])
+        tau_max = max(tau_max, tau_min_N11[1])
+    tau_lower = tau_min
+    tau_upper = tau_max
+    N_accept_lower = N_accept_min
+    N_accept_upper = N_accept_max
+    return (tau_lower, N_accept_lower, tau_upper, N_accept_upper,
+            rand_test_total)

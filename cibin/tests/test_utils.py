@@ -158,3 +158,16 @@ def test_tau_twoside_less_treated():
     expected_twoside_less_treated = (-0.0625, 0.875, [1, 0, 1, 14],
                                      [1, 14, 0, 1], 103)
     assert twoside_less_treated == expected_twoside_less_treated
+
+
+def test_tau_twosided():
+    """Test tau_twoside_less_treated returns correct taus and N_accepts."""
+    n11 = 1
+    n10 = 1
+    n01 = 1
+    n00 = 13
+    alpha = 0.05
+    nperm = 1000
+    twoside = tau_twoside(n11, n10, n01, n00, alpha, nperm)
+    expected_twoside = (-0.0625, 0.875, [1, 0, 1, 14], [1, 14, 0, 1], 103)
+    assert twoside == expected_twoside

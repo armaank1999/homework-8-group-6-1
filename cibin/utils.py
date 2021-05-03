@@ -188,15 +188,20 @@ def check_compatible(n11, n10, n01, n00, N11, N10, N01):
         number of subjects under control that experienced outcome 1
     n00: int
         number of subjects under control that experienced outcome 0
-    N11: int
+    N11: list of integers
         potential number of subjects under treatment that experienced
         outcome 1
-    N10: int
+    N10: list of integers
         potential number of subjects under treatment that experienced
         outcome 0
-    N01: int
+    N01: list of integers
         potential number of subjects under treatment that experienced
         outcome 0
+    
+    Returns
+    -------
+    compact: list
+        booleans indicating compatibility of inputs
     """
     n = n11 + n10 + n01 + n00
     n_t = len(N10)

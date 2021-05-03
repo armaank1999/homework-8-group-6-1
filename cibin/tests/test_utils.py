@@ -171,3 +171,14 @@ def test_tau_twosided():
     twoside = tau_twoside(n11, n10, n01, n00, alpha, nperm)
     expected_twoside = (-0.0625, 0.875, [1, 0, 1, 14], [1, 14, 0, 1], 103)
     assert twoside == expected_twoside
+
+
+def test_exact_CI_odd():
+    """Test exact_CI_odd returns correct CI."""
+    N = 50
+    n = 15
+    x = 10
+    alpha = 0.05
+    CI_odd = exact_CI_odd(N, n, x, alpha)
+    expected_CI_odd = [23, 41]
+    assert CI_odd == expected_CI_odd

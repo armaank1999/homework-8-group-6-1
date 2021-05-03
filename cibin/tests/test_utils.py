@@ -115,7 +115,7 @@ def test_tau_lower_oneside():
 
 
 def test_tau_lower_N11_twoside():
-    """Test tau_lower_N11_twoside returns the correct taus and N_accepts."""
+    """Test tau_lower_N11_twoside returns correct taus and N_accepts."""
     n11 = 6
     n10 = 4
     n01 = 4
@@ -131,7 +131,7 @@ def test_tau_lower_N11_twoside():
 
 
 def test_tau_twoside_lower():
-    """Test tau_twoside_lower returns the correct taus and N_accepts."""
+    """Test tau_twoside_lower returns correct taus and N_accepts."""
     n11 = 1
     n10 = 1
     n01 = 1
@@ -143,3 +143,18 @@ def test_tau_twoside_lower():
     twoside_lower = tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all)
     expected_twoside_lower = (-0.0625, [1, 0, 1, 14], 0.375, [0, 7, 1, 8], 48)
     assert twoside_lower == expected_twoside_lower
+
+
+def test_tau_twoside_less_treated():
+    """Test tau_twoside_less_treated returns correct taus and N_accepts."""
+    n11 = 1
+    n10 = 1
+    n01 = 1
+    n00 = 13
+    alpha = 0.05
+    nperm = 1000
+    twoside_less_treated = tau_twoside_less_treated(n11, n10, n01, n00, alpha,
+                                                    nperm)
+    expected_twoside_less_treated = (-0.0625, 0.875, [1, 0, 1, 14],
+                                     [1, 14, 0, 1], 103)
+    assert twoside_less_treated == expected_twoside_less_treated

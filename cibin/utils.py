@@ -64,7 +64,7 @@ def combs(n, m, nperm):
 
 def pval_one_lower(n, m, N, Z_all, tau_obs):
     """
-    P-value for method I.
+    Calculate p-value for method I.
 
     Parameters
     ----------
@@ -117,3 +117,57 @@ def pval_one_lower(n, m, N, Z_all, tau_obs):
                      for i in np.arange(len(tau_hat))])
     pl = count/n_Z_all
     return pl
+
+
+def pval_two(n, m, N, Z_all, tau_obs):
+    """
+    Calculate p-value for method 3.
+
+    Parameters
+    ----------
+    n: int
+        total number of subjects
+    m: int
+        number of subjects with treatment
+    N: list
+        potential table
+    Z_all: list
+        re-randomization or sample of re-randomization matrix
+    tau_obs: float
+        observed value of tau
+
+    Returns:
+    --------
+    pl: float
+        p-value
+    """
+    n_Z_all = len(Z_all)
+    dat = [[None]*2 for i in np.arange(n)]
+    if N[0] > 0:
+        for i in np.arange(N[0]):
+            dat[i] = [1]*2
+    if N[1] > 0:
+        for i in np.arange(N[0], N[0]+N[1]):
+            dat[i][0] = 1
+            dat[i][1] = 0
+    if N[2] > 0:
+        for i in np.arange(N[0]+N[1], N[0]+N[1]+N[2]):
+            dat[i][0] = 0
+            dat[i][1] = 1
+    if N[3] > 0:
+        for i in np.arange(N[0]+N[1]+N[2], sum(N)):
+            dat[int(i)] = [0]*2
+    x = [i[0]/m for i in dat]
+    y = [i[1]/(n-m) for i in dat]
+    a = []
+    b = []
+    for i in np.arange(len(Z_all)):
+        a.append(sum([x[j]*Z_all[i][j] for j in np.arange(len(x))]))
+        b.append(sum([(1 - Z_all[i][j])*y[j] for j in np.arange(len(y))]))
+    tau_hat = [a[i] - b[i] for i in np.arange(len(a))]
+    tau_N = (N[1] - N[2])/n
+    count = sum([1 if round(abs(tau_hat[i] - tau_N), 14) >=
+                 round(abs(tau_obs - tau_N), 14) else 0
+                 for i in np.arange(len(tau_hat))])
+    pd = count/n_Z_all
+    return pd

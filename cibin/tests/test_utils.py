@@ -11,7 +11,7 @@ from ..utils import *
 
 
 def test_nchoosem():
-    """Test that nchoosem returns correct list."""
+    """Test nchoosem returns correct list."""
     n = 5
     m = 3
     Z = nchoosem(n, m)
@@ -24,7 +24,7 @@ def test_nchoosem():
 
 
 def test_combs():
-    """Test that rows of list have correct number of ones."""
+    """Test rows of list have correct number of ones."""
     n = 5
     m = 3
     nperm = 10
@@ -34,7 +34,7 @@ def test_combs():
 
 
 def test_pval_one_lower():
-    """Test that pval_one_lower returns correct p-value."""
+    """Test pval_one_lower returns correct p-value."""
     n11 = 6
     n10 = 4
     n01 = 4
@@ -53,7 +53,7 @@ def test_pval_one_lower():
 
 
 def test_pval_two():
-    """Test that pval_two returns correct p-value."""
+    """Test pval_two returns correct p-value."""
     n11 = 6
     n10 = 4
     n01 = 4
@@ -72,7 +72,7 @@ def test_pval_two():
 
 
 def test_check_compatible():
-    """Check that check_compatible returns correct list of booleans."""
+    """Check check_compatible returns correct list of booleans."""
     n11 = 6
     n10 = 4
     n01 = 4
@@ -86,7 +86,7 @@ def test_check_compatible():
 
 
 def test_tau_lower_N11_oneside():
-    """Test that tau_lower_N11_oneside returns correct tau_min and N_accept."""
+    """Test tau_lower_N11_oneside returns correct tau_min and N_accept."""
     n11 = 6
     n10 = 4
     n01 = 4
@@ -96,27 +96,35 @@ def test_tau_lower_N11_oneside():
     N11 = 10
     Z_all = nchoosem(n, m)
     alpha = 0.05
-    tau_min, N_accept = tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all,
-                                              alpha)
-    expected_tau_min = -0.15
-    expected_N_accept = [10, 0, 3, 7]
-    assert tau_min == expected_tau_min
-    assert N_accept == expected_N_accept
+    N11_oneside = tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha)
+    expected_N11_oneside = (-0.15, [10, 0, 3, 7])
+    assert N11_oneside == expected_N11_oneside
 
 
 def test_tau_lower_oneside():
-    """Test that tau_lower_oneside returns correct taus and N_accept."""
+    """Test tau_lower_oneside returns correct tau_lower and tau_upper."""
     n11 = 6
     n10 = 4
     n01 = 4
     n00 = 6
     alpha = 0.05
-    nperm = 1000
-    tau_lower, tau_upper, N_accept = tau_lower_oneside(n11, n10, n01, n00,
-                                                       alpha, nperm)
-    expected_tau_lower = -0.15
-    expected_tau_upper = 0.6
-    expected_N_accept = [5, 1, 4, 10]
-    assert tau_lower == expected_tau_lower
-    assert tau_upper == expected_tau_upper
-    assert N_accept == expected_N_accept
+    nperm = 6000
+    lower_oneside = tau_lower_oneside(n11, n10, n01, n00, alpha, nperm)
+    expected_lower_oneside = (-0.15, 0.6, [5, 1, 4, 10])
+    assert lower_oneside == expected_lower_oneside
+
+
+def test_tau_lower_N11_twoside():
+    """Test tau_lower_N11_twoside returns the correct taus and N_accepts."""
+    n11 = 6
+    n10 = 4
+    n01 = 4
+    n00 = 6
+    n = n11+n10+n01+n00
+    m = n11+n10
+    N11 = 10
+    Z_all = nchoosem(n, m)
+    alpha = 0.05
+    N11_twoside = tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha)
+    expected_N11_twoside = (-0.2, 0.2, [10, 0, 4, 6], [10, 4, 0, 6], 11)
+    assert N11_twoside == expected_N11_twoside

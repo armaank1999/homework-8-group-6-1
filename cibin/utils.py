@@ -760,7 +760,7 @@ def exact_CI_odd(N, n, x, alpha):
         return kk
     lower = int([lciw[i] for i in xx if i == x][0])
     upper = int([uciw[i] for i in xx if i == x][0])
-    return [lower, upper]
+    return (lower, upper)
 
 
 def exact_CI_even(N, n, x, alpha):
@@ -912,7 +912,7 @@ def exact_CI_even(N, n, x, alpha):
         xvalue = int(xvalue - 1)
     lower = [lciw[i] for i in xx if i == x][0]
     upper = [uciw[i] for i in xx if i == x][0]
-    return [lower, upper]
+    return (lower, upper)
 
 
 def exact_CI(N, n, x, alpha):
@@ -943,7 +943,7 @@ def exact_CI(N, n, x, alpha):
         ci = exact_CI_even(N, n, x, alpha)
     lower = int(ci[0])
     upper = int(ci[1])
-    return [lower, upper]
+    return (lower, upper)
 
 
 def combin_exact_CI(n11, n10, n01, n00, alpha):
@@ -965,9 +965,9 @@ def combin_exact_CI(n11, n10, n01, n00, alpha):
 
     Returns
     -------
-    tau_lower: int
+    tau_lower: float
         left-side tau for one-sided confidence interval
-    tau_upper: int
+    tau_upper: float
         right-side tau for one-sided confidence interval
     """
     n = n11+n10+n01+n00
@@ -976,4 +976,48 @@ def combin_exact_CI(n11, n10, n01, n00, alpha):
     ci_plus1 = exact_CI(N=n, n=(n-m), x=n01, alpha=alpha/2)
     tau_upper = (ci_1plus[1]-ci_plus1[0])/n
     tau_lower = (ci_1plus[0]-ci_plus1[1])/n
-    return tau_lower, tau_upper
+    return (tau_lower, tau_upper)
+
+
+def N_plus1_exact_CI(n11, n10, n01, n00, alpha):
+    """
+    Calculate optimal exact CI from observed table.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    alpha: float
+        1 - confidence level
+
+    Returns
+    -------
+    tau_lower: float
+        left-side tau for one-sided confidence interval
+    tau_upper: float
+        right-side tau for one-sided confidence interval
+    """
+    n = n11+n10+n01+n00
+    m = n11+n10
+    tau_min = float('inf')
+    tau_max = float('-inf')
+    ci_plus1 = exact_CI(N=n, n=(n-m), x=n01, alpha=alpha)
+    for N_plus1 in np.arange(ci_plus1[0], ci_plus1[1]+1):
+        for N11 in np.arange(N_plus1+1):
+            N01 = N_plus1-N11
+            for N10 in np.arange(n-N_plus1+1):
+                N00 = n-N_plus1-N10
+                if check_compatible(n11, n10, n01, n00, [N11], [N10],
+                                    [N01])[0]:
+                    tau = (N10-N01)/n
+                    tau_min = min(tau, tau_min)
+                    tau_max = max(tau, tau_max)
+    upper = tau_max
+    lower = tau_min
+    return (lower, upper)

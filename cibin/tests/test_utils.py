@@ -69,3 +69,17 @@ def test_pval_two():
     pval = pval_two(n, m, N, Z_all, tau_obs)
     expected = 0.47368421052631576
     assert pval == expected
+
+
+def check_compatible():
+    """Check that check_compatible returns correct list of booleans."""
+    n11 = 6
+    n10 = 4
+    n01 = 4
+    n00 = 6
+    N11 = [5, 6, 7]
+    N10 = [6, 7, 8]
+    N01 = [5, 7, 9]
+    compatible = check_compatible(n11, n10, n01, n00, N11, N10, N01)
+    expected = [True, True, False]
+    assert compatible == expected

@@ -256,8 +256,8 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
     N10 = 0
     tau_obs = n11/m - n01/(n-m)
     M = [0]*(n-N11+1)
-    while (N10 <= (n - N11 - N01)) & (N01 <= (n - N11)):
-        pl = pval_one_lower(n, m, [N11, N10, N01, n - (N11 + N10 + N01)],
+    while (N10 <= (n-N11-N01)) & (N01 <= (n-N11)):
+        pl = pval_one_lower(n, m, [N11, N10, N01, n-(N11 + N10 + N01)],
                             Z_all, tau_obs)
         if pl >= alpha:
             M[N01] = N10
@@ -287,7 +287,7 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
                           compat[i]]
         N01_vec_compat = [N01_vec[i] for i in np.arange(len(N10_vec)) if
                           compat[i]]
-        tau_min = min([N10_vec_compat[i] - N01_vec_compat[i] for i in
+        tau_min = min([N10_vec_compat[i]-N01_vec_compat[i] for i in
                        np.arange(len(N10_vec_compat))])/n
         accept_pos = [i for i in np.arange(len(N10_vec_compat)) if
                       N10_vec_compat[i]-N01_vec_compat[i] == n*tau_min]
@@ -347,3 +347,113 @@ def tau_lower_oneside(n11, n10, n01, n00, alpha, nperm):
     tau_lower = tau_min
     tau_upper = (n11+n00)/n
     return tau_lower, tau_upper, N_accept
+
+
+def tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha):
+    """
+    Calculate tau_min and N_accept for method 3.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    N11: int
+        potential number of subjects under treatment that experienced
+        outcome 1
+    Z_all: list
+        re-randomization or sample of re-randomization matrix
+    alpha: float
+        1 - confidence level
+
+    Returns
+    -------
+    tau_min: float
+        minimum tau value of accepted potential tables
+    tau_max: float
+        minimum tau value of accepted potential tables
+    N_accept_min: list
+        minimum accepted potential table
+    N_accept_max: list
+        maximum accepted potential table
+    rand_test_num: int
+        number of tests run
+    """
+    n = n11 + n10 + n01 + n00
+    m = n11 + n10
+    tau_obs = n11/m - n01/(n-m)
+    ntau_obs = n*n11/m - n*n01/(n-m)
+    N10 = 0
+    N01_vec0 = [i for i in np.arange(n-N11+1) if i >= (-ntau_obs)]
+    N01 = min(N01_vec0)
+    M = [float('NaN')]*len(N01_vec0)
+    rand_test_num = 0
+    while (N10 <= (n-N11-N01)) & (N01 <= (n-N11)):
+        if N10 <= (N01+ntau_obs):
+            pl = pval_two(n, m, [N11, N10, N01, n-(N11 + N10 + N01)], Z_all,
+                          tau_obs)
+            rand_test_num += 1
+            if pl >= alpha:
+                for i in np.arange(len(M)):
+                    if N01_vec0[i] == N01:
+                        M[i] = N10
+                N01 += 1
+            else:
+                N10 += 1
+        else:
+            for i in np.arange(len(M)):
+                if N01_vec0[i] == N01:
+                    M[i] = N10
+            N01 += 1
+    if N01 <= (n-N11):
+        for i in np.arange(len(M)):
+            if N01_vec0[i] >= N01:
+                M[i] = floor(N01_vec0[i]+ntau_obs)+1
+    N11_vec0 = [N11]*len(N01_vec0)
+    N10_vec0 = M
+    N11_vec = []
+    N10_vec = []
+    N01_vec = []
+    for i in np.arange(len(N11_vec0)):
+        N10_upper = min((n-N11_vec0[i]-N01_vec0[i]), floor(N01_vec0[i] +
+                                                           ntau_obs))
+        if N10_vec0[i] <= N10_upper:
+            N10_vec.extend(np.arange(N10_vec0[i], N10_upper+1).tolist())
+            N11_vec.extend([N11_vec0[i]]*(N10_upper-N10_vec0[i]+1))
+            N01_vec.extend([N01_vec0[i]]*(N10_upper-N10_vec0[i]+1))
+    compat = check_compatible(n11, n10, n01, n00, N11_vec, N10_vec, N01_vec)
+    if sum(compat) > 0:
+        N10_vec_compat = [N10_vec[i] for i in np.arange(len(N10_vec)) if
+                          compat[i]]
+        N01_vec_compat = [N01_vec[i] for i in np.arange(len(N10_vec)) if
+                          compat[i]]
+        tau_min = min([N10_vec_compat[i]-N01_vec_compat[i] for i in
+                       np.arange(len(N10_vec_compat))])/n
+        accept_pos = [i for i in np.arange(len(N10_vec_compat)) if
+                      N10_vec_compat[i]-N01_vec_compat[i] == n*tau_min]
+        accept_pos = accept_pos[0]
+        N_accept_min = [N11, N10_vec_compat[accept_pos],
+                        N01_vec_compat[accept_pos],
+                        n-(N11+N10_vec_compat[accept_pos] +
+                           N01_vec_compat[accept_pos])]
+
+        tau_max = max([N10_vec_compat[i] - N01_vec_compat[i] for i in
+                       np.arange(len(N10_vec_compat))])/n
+        accept_pos = [i for i in np.arange(len(N10_vec_compat)) if
+                      N10_vec_compat[i]-N01_vec_compat[i] == n*tau_max]
+        accept_pos = accept_pos[0]
+        N_accept_max = [N11, N10_vec_compat[accept_pos],
+                        N01_vec_compat[accept_pos],
+                        n-(N11+N10_vec_compat[accept_pos] +
+                           N01_vec_compat[accept_pos])]
+    else:
+        tau_min = float('inf')
+        N_accept_min = float('NaN')
+        tau_max = float('-inf')
+        N_accept_max = float('NaN')
+    return tau_min, tau_max, N_accept_min, N_accept_max, rand_test_num

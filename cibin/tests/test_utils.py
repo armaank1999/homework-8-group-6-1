@@ -211,6 +211,7 @@ def test_exact_CI():
 
 
 def test_combin_exact_CI():
+    """Test that combin_exact_CI returns correct CI."""
     n11 = 6
     n10 = 4
     n01 = 4
@@ -219,3 +220,15 @@ def test_combin_exact_CI():
     exact_CI = combin_exact_CI(n11, n10, n01, n00, alpha)
     expected_exact_CI = (-0.3, 0.6)
     assert exact_CI == expected_exact_CI
+
+
+def test_N_plus1_exact_CI():
+    """Test that N_plus1_exact_CI returns correct CI."""
+    n11 = 6
+    n10 = 4
+    n01 = 4
+    n00 = 6
+    alpha = .05
+    Nplus1_exact_CI = N_plus1_exact_CI(n11, n10, n01, n00, alpha)
+    expected_Nplus1_exact_CI = (-0.3, 0.55)
+    assert Nplus1_exact_CI == expected_Nplus1_exact_CI

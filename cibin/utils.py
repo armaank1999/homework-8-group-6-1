@@ -96,7 +96,6 @@ def pval_one_lower(n, m, N, Z_all, tau_obs):
             dat[i][1] = 0
     if N[2] > 0:
         for i in np.arange(N[0]+N[1], N[0]+N[1]+N[2]):
-            print(i)
             dat[i][0] = 0
             dat[i][1] = 1
     if N[3] > 0:
@@ -301,3 +300,50 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
         tau_min = (n11 + n00)/n
         N_accept = float('NaN')
     return tau_min, N_accept
+
+
+def tau_lower_oneside(n11, n10, n01, n00, alpha, nperm):
+    """
+    Calculate tau_lower, tau_upper, and N_accept for method I.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    alpha: float
+        1 - confidence level
+    nperm: int
+        maximum desired number of permutations
+
+    Returns
+    -------
+    tau_lower: float
+        left-side tau for final confidence interval
+    tau_upper: float
+        right-side tau for final confidence interval
+    N_accept:
+        accepted potential table for final confidence interval
+    """
+    n = n11+n10+n01+n00
+    m = n11+n10
+    if comb(n, m) <= nperm:
+        Z_all = nchoosem(n, m)
+    else:
+        Z_all = combs(n, m, nperm)
+    tau_min = (n11+n00)/n
+    N_accept = float('NaN')
+    for N11 in np.arange(n11+n01+1):
+        tau_min_N11 = tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all,
+                                            alpha)
+        if tau_min_N11[0] < tau_min:
+            N_accept = tau_min_N11[1]
+        tau_min = min(tau_min, tau_min_N11[0])
+    tau_lower = tau_min
+    tau_upper = (n11+n00)/n
+    return tau_lower, tau_upper, N_accept

@@ -180,7 +180,7 @@ def test_exact_CI_odd():
     x = 10
     alpha = 0.05
     CI_odd = exact_CI_odd(N, n, x, alpha)
-    expected_CI_odd = [23, 41]
+    expected_CI_odd = (23, 41)
     assert CI_odd == expected_CI_odd
 
 
@@ -191,7 +191,7 @@ def test_exact_CI_even():
     x = 10
     alpha = 0.05
     CI_even = exact_CI_even(N, n, x, alpha)
-    expected_CI_even = [24, 43]
+    expected_CI_even = (24, 43)
     assert CI_even == expected_CI_even
 
 
@@ -202,9 +202,20 @@ def test_exact_CI():
     x = 10
     alpha = 0.05
     CI_odd = exact_CI(N, n, x, alpha)
-    expected_CI_odd = [23, 41]
+    expected_CI_odd = (23, 41)
     assert CI_odd == expected_CI_odd
     n = 14
     CI_even = exact_CI(N, n, x, alpha)
-    expected_CI_even = [24, 43]
+    expected_CI_even = (24, 43)
     assert CI_even == expected_CI_even
+
+
+def test_combin_exact_CI():
+    n11 = 6
+    n10 = 4
+    n01 = 4
+    n00 = 6
+    alpha = .05
+    exact_CI = combin_exact_CI(n11, n10, n01, n00, alpha)
+    expected_exact_CI = (-0.3, 0.6)
+    assert exact_CI == expected_exact_CI

@@ -108,8 +108,8 @@ def pval_one_lower(n, m, N, Z_all, tau_obs):
     b = []
     for i in np.arange(len(Z_all)):
         a.append(sum([x[j]*Z_all[i][j] for j in np.arange(len(x))]))
-        b.append(sum([(1 - Z_all[i][j])*y[j] for j in np.arange(len(y))]))
-    tau_hat = [a[i] - b[i] for i in np.arange(len(a))]
+        b.append(sum([(1-Z_all[i][j])*y[j] for j in np.arange(len(y))]))
+    tau_hat = [a[i]-b[i] for i in np.arange(len(a))]
     if isinstance(tau_obs, list):
         count = sum([1 if round(tau_hat[i], 15) >= round(tau_obs[i], 15) else 0
                      for i in np.arange(len(tau_hat))])
@@ -164,11 +164,11 @@ def pval_two(n, m, N, Z_all, tau_obs):
     b = []
     for i in np.arange(len(Z_all)):
         a.append(sum([x[j]*Z_all[i][j] for j in np.arange(len(x))]))
-        b.append(sum([(1 - Z_all[i][j])*y[j] for j in np.arange(len(y))]))
-    tau_hat = [a[i] - b[i] for i in np.arange(len(a))]
-    tau_N = (N[1] - N[2])/n
-    count = sum([1 if round(abs(tau_hat[i] - tau_N), 14) >=
-                 round(abs(tau_obs - tau_N), 14) else 0
+        b.append(sum([(1-Z_all[i][j])*y[j] for j in np.arange(len(y))]))
+    tau_hat = [a[i]-b[i] for i in np.arange(len(a))]
+    tau_N = (N[1]-N[2])/n
+    count = sum([1 if round(abs(tau_hat[i]-tau_N), 14) >=
+                 round(abs(tau_obs-tau_N), 14) else 0
                  for i in np.arange(len(tau_hat))])
     pd = count/n_Z_all
     return pd
@@ -197,13 +197,13 @@ def check_compatible(n11, n10, n01, n00, N11, N10, N01):
     N01: list of integers
         potential number of subjects under treatment that experienced
         outcome 0
-    
+
     Returns
     -------
     compact: list
         booleans indicating compatibility of inputs
     """
-    n = n11 + n10 + n01 + n00
+    n = n11+n10+n01+n00
     n_t = len(N10)
     lefts = [[] for i in np.arange(len(N10))]
     rights = [[] for i in np.arange(len(N10))]
@@ -212,11 +212,92 @@ def check_compatible(n11, n10, n01, n00, N11, N10, N01):
         rights[i].append(N11[i])
         lefts[i].append(n11 - N10[i])
         rights[i].append(n11)
-        lefts[i].append(N11[i] - n01)
-        rights[i].append(N11[i] + N01[i] - n01)
-        lefts[i].append(N11[i] + N01[i] - n10 - n01)
-        rights[i].append(n - N10[i] - n01 - n10)
+        lefts[i].append(N11[i]-n01)
+        rights[i].append(N11[i]+N01[i]-n01)
+        lefts[i].append(N11[i]+N01[i]-n10-n01)
+        rights[i].append(n-N10[i]-n01-n10)
     left = [max(x) for x in lefts]
     right = [min(x) for x in rights]
     compact = [left[i] <= right[i] for i in np.arange(len(left))]
     return compact
+
+
+def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
+    """
+    Calculate tau_min and N_accept for method I.
+
+    Parameters
+    ----------
+    n11: int
+        number of subjects under treatment that experienced outcome 1
+    n10: int
+        number of subjects under treatment that experienced outcome 0
+    n01: int
+        number of subjects under control that experienced outcome 1
+    n00: int
+        number of subjects under control that experienced outcome 0
+    N11: int
+        potential number of subjects under treatment that experienced
+        outcome 1
+    Z_all: list
+        re-randomization or sample of re-randomization matrix
+    alpha: float
+        1 - confidence level
+
+    Returns
+    -------
+    tau_min: float
+        minimum tau value of accepted potential tables
+    N_accept:
+        accepted potential table
+    """
+    n = n11+n10+n01+n00
+    m = n11+n10
+    N01 = 0
+    N10 = 0
+    tau_obs = n11/m - n01/(n-m)
+    M = [0]*(n-N11+1)
+    while (N10 <= (n - N11 - N01)) & (N01 <= (n - N11)):
+        pl = pval_one_lower(n, m, [N11, N10, N01, n - (N11 + N10 + N01)],
+                            Z_all, tau_obs)
+        if pl >= alpha:
+            M[N01] = N10
+            N01 += 1
+        else:
+            N10 += 1
+    if N01 <= (n - N11):
+        for i in np.arange(N01, (n-N11+1)):
+            M[i] = n+1
+    N11_vec0 = [N11]*(n-N11+1)
+    N10_vec0 = M
+    N01_vec0 = np.arange((n-N11+1)).tolist()
+    N11_vec = []
+    N10_vec = []
+    N01_vec = []
+    for i in np.arange(len(N11_vec0)):
+        if N10_vec0[i] <= (n - N11_vec0[i] - N01_vec0[i]):
+            N10_vec.extend(np.arange(N10_vec0[i], n-N11_vec0[i]-N01_vec0[i]+1)
+                           .tolist())
+            N11_vec.extend([N11_vec0[i]]*(n-N11_vec0[i]-N01_vec0[i]-N10_vec0[i]
+                                          + 1))
+            N01_vec.extend([N01_vec0[i]]*(n-N11_vec0[i]-N01_vec0[i]-N10_vec0[i]
+                                          + 1))
+    compat = check_compatible(n11, n10, n01, n00, N11_vec, N10_vec, N01_vec)
+    if sum(compat) > 0:
+        N10_vec_compat = [N10_vec[i] for i in np.arange(len(N10_vec)) if
+                          compat[i]]
+        N01_vec_compat = [N01_vec[i] for i in np.arange(len(N10_vec)) if
+                          compat[i]]
+        tau_min = min([N10_vec_compat[i] - N01_vec_compat[i] for i in
+                       np.arange(len(N10_vec_compat))])/n
+        accept_pos = [i for i in np.arange(len(N10_vec_compat)) if
+                      N10_vec_compat[i]-N01_vec_compat[i] == n*tau_min]
+        accept_pos = accept_pos[0]
+        N_accept = [N11, N10_vec_compat[accept_pos],
+                    N01_vec_compat[accept_pos],
+                    n-(N11+N10_vec_compat[accept_pos] +
+                       N01_vec_compat[accept_pos])]
+    else:
+        tau_min = (n11 + n00)/n
+        N_accept = float('NaN')
+    return tau_min, N_accept

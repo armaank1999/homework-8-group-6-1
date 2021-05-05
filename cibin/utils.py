@@ -189,7 +189,7 @@ def check_compatible(n11, n10, n01, n00, N11, N10, N01):
     n00: int
         number of subjects under control that experienced outcome 0
     N11: list of integers
-        potential number of subjects under treatment that experienced
+        number of subjects under control and treatment with potential outcome 1
         outcome 1
     N10: list of integers
         potential number of subjects under treatment that experienced
@@ -237,8 +237,7 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
     n00: int
         number of subjects under control that experienced outcome 0
     N11: int
-        potential number of subjects under treatment that experienced
-        outcome 1
+        number of subjects under control and treatment with potential outcome 1
     Z_all: list
         re-randomization or sample of re-randomization matrix
     alpha: float
@@ -365,8 +364,7 @@ def tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha):
     n00: int
         number of subjects under control that experienced outcome 0
     N11: int
-        potential number of subjects under treatment that experienced
-        outcome 1
+        number of subjects under control and treatment with potential outcome 1
     Z_all: list
         re-randomization or sample of re-randomization matrix
     alpha: float
@@ -460,7 +458,7 @@ def tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha):
     return (tau_min, tau_max, N_accept_min, N_accept_max, rand_test_num)
 
 
-def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all):
+def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all, exact, reps):
     """
     Calculate taus and N_accepts for method 3.
 
@@ -478,6 +476,10 @@ def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all):
         1 - confidence level
     Z_all: list
         re-randomization or sample of re-randomization matrix
+    exact: boolean
+        whether or not to calculate exact confidence interval
+    reps:
+        if exact = False, number of simulations per table
 
     Returns
     -------
@@ -511,6 +513,8 @@ def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all):
             N_accept_max = tau_min_N11[3]
         tau_min = min(tau_min, tau_min_N11[0])
         tau_max = max(tau_max, tau_min_N11[1])
+        if (not exact) and (rand_test_total >= reps):
+            break
     tau_lower = tau_min
     tau_upper = tau_max
     N_accept_lower = N_accept_min
@@ -519,7 +523,8 @@ def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all):
             rand_test_total)
 
 
-def tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm):
+def tau_twoside_less_treated(n11, n10, n01, n00, alpha, exact,
+                             max_combinations, reps):
     """
     Calculate taus and N_accepts for method 3.
 
@@ -535,8 +540,12 @@ def tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm):
         number of subjects under control that experienced outcome 0
     alpha: float
         1 - confidence level
-    nperm: int
-        maximum desired number of permutations
+    exact: boolean
+        whether or not to calculate exact confidence interval
+    max_combinations:
+        if exact = True, maximum desired number of combinations
+    reps:
+        if exact = False, number of simulations per table
 
     Returns
     -------
@@ -553,12 +562,20 @@ def tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm):
     """
     n = n11+n10+n01+n00
     m = n11+n10
-    if comb(n, m) <= nperm:
-        Z_all = nchoosem(n, m)
+    if exact:
+        if comb(n, m) <= max_combinations:
+            Z_all = nchoosem(n, m)
+        else:
+            raise Exception('Not enough combinations. Increase \
+                             max_combinations to ' + str(comb(n, m)) +
+                            ' for exact interval.')
     else:
-        Z_all = combs(n, m, nperm)
-    ci_lower = tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all)
-    ci_upper = tau_twoside_lower(n10, n11, n00, n01, alpha, Z_all)
+        if comb(n, m) <= max_combinations:
+            Z_all = nchoosem(n, m)
+        else:
+            Z_all = combs(n, m, reps)
+    ci_lower = tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all, exact, reps)
+    ci_upper = tau_twoside_lower(n10, n11, n00, n01, alpha, Z_all, exact, reps)
     rand_test_total = ci_lower[4] + ci_upper[4]
     tau_lower = min(ci_lower[0], -1*ci_upper[2])
     tau_upper = max(ci_lower[2], -1*ci_upper[0])
@@ -574,7 +591,7 @@ def tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm):
             rand_test_total)
 
 
-def tau_twoside(n11, n10, n01, n00, alpha, nperm):
+def tau_twosided_ci(n11, n10, n01, n00, alpha, exact, max_combinations, reps):
     """
     Calculate taus and N_accepts for method 3.
 
@@ -590,8 +607,12 @@ def tau_twoside(n11, n10, n01, n00, alpha, nperm):
         number of subjects under control that experienced outcome 0
     alpha: float
         1 - confidence level
-    nperm: int
-        maximum desired number of permutations
+    exact: boolean
+        whether or not to calculate exact confidence interval
+    max_combinations:
+        if exact = True, maximum desired number of combinations
+    reps:
+        if exact = False, number of simulations per table
 
     Returns
     -------
@@ -609,21 +630,129 @@ def tau_twoside(n11, n10, n01, n00, alpha, nperm):
     n = n11+n10+n01+n00
     m = n11+n10
     if m > (n/2):
-        ci = tau_twoside_less_treated(n01, n00, n11, n10, alpha, nperm)
+        ci = tau_twoside_less_treated(n11, n10, n01, n00, alpha, exact,
+                                      max_combinations, reps)
         tau_lower = -ci[1]
         tau_upper = -ci[0]
         N_accept_lower = ci[2]
         N_accept_upper = ci[3]
         rand_test_total = ci[4]
     else:
-        ci = tau_twoside_less_treated(n11, n10, n01, n00, alpha, nperm)
+        ci = tau_twoside_less_treated(n11, n10, n01, n00, alpha, exact,
+                                      max_combinations, reps)
         tau_lower = ci[0]
         tau_upper = ci[1]
         N_accept_lower = ci[2]
         N_accept_upper = ci[3]
         rand_test_total = ci[4]
-    return (tau_lower, tau_upper, N_accept_lower, N_accept_upper,
-            rand_test_total)
+    if exact:
+        num_tables = len(nchoosem(n, m))
+    else:
+        num_tables = len(combs(n, m, reps))
+    return ([int(tau_lower*n), int(tau_upper*n)],
+            [N_accept_lower, N_accept_upper], [num_tables, rand_test_total])
+
+
+def ind(x, a, b):
+    """
+    Indicator function for a <= x <= b.
+
+    Parameters
+    ----------
+    x: int
+        desired value
+    a: int
+        lower bound of interval
+    b:
+        upper bound of interval
+
+    Returns
+    -------
+    1 if a <= x <= b and 0 otherwise.
+    """
+    return (x >= a)*(x <= b)
+
+
+def lci(x, n, N, alpha):
+    """
+    Calculate lower confidence bound.
+
+    Parameters
+    ----------
+    x: int/list
+        number(s) of good items in the sample
+    n: int
+        sample size
+    N: int
+        population size
+    alpha: float
+        1 - confidence level
+
+    Returns
+    -------
+    kk: int/list
+        lower bound(s)
+    """
+    if isinstance(x, int):
+        xs = [x]
+    else:
+        xs = x
+    kk = np.arange(0, len(xs)).tolist()
+    for i in kk:
+        if xs[i] < 0.5:
+            kk[i] = 0
+        else:
+            aa = np.arange(0, N+1).tolist()
+            bb = [x+1 for x in aa]
+            bb[1:(N+1)] = hypergeom.cdf(xs[i]-1, N, [x-1 for x in
+                                                     aa[1:(N+1)]], n)
+            cc = []
+            cc.append(aa)
+            cc.append(bb)
+            inds = [i >= (1-alpha) for i in cc[1]]
+            dd = [[], []]
+            dd[0] = [cc[0][i] for i in np.arange(len(inds)) if inds[i]]
+            dd[1] = [cc[1][i] for i in np.arange(len(inds)) if inds[i]]
+            if len(dd[0])*len(dd) == 2:
+                kk[i] = dd[1][0]
+            else:
+                kk[i] = max(dd[0])
+    if isinstance(x, int):
+        return kk[0]
+    else:
+        return kk
+
+
+def uci(x, n, N, alpha):
+    """
+    Calculate upper confidence bound.
+
+    Parameters
+    ----------
+    x: int/list
+        number(s) of good items in the sample
+    n: int
+        sample size
+    N: int
+        population size
+    alpha: float
+        1 - confidence level
+
+    Returns
+    -------
+    kk: int/list
+        upper bound(s)
+    """
+    if isinstance(x, int):
+        xs = [x]
+    else:
+        xs = x
+    lcis = lci([n-i for i in xs], n, N, alpha)
+    upper = [N - i for i in lcis]
+    if isinstance(x, int):
+        return upper[0]
+    else:
+        return upper
 
 
 def exact_CI_odd(N, n, x, alpha):
@@ -648,55 +777,11 @@ def exact_CI_odd(N, n, x, alpha):
     upper: int
         upper bound of confidence interval
     """
-    def ind(x, a, b):
-        return (x >= a)*(x <= b)
-
-    def lci(x, n, alpha):
-        if isinstance(x, int):
-            xs = [x]
-        else:
-            xs = x
-        kk = np.arange(0, len(xs)).tolist()
-        for i in kk:
-            if xs[i] < 0.5:
-                kk[i] = 0
-            else:
-                aa = np.arange(0, N+1).tolist()
-                bb = [x+1 for x in aa]
-                bb[1:(N+1)] = hypergeom.cdf(xs[i]-1, N, [x-1 for x in
-                                                         aa[1:(N+1)]], n)
-                cc = []
-                cc.append(aa)
-                cc.append(bb)
-                inds = [i >= (1-alpha) for i in cc[1]]
-                dd = [[], []]
-                dd[0] = [cc[0][i] for i in np.arange(len(inds)) if inds[i]]
-                dd[1] = [cc[1][i] for i in np.arange(len(inds)) if inds[i]]
-                if len(dd[0])*len(dd) == 2:
-                    kk[i] = dd[1][0]
-                else:
-                    kk[i] = max(dd[0])
-        if isinstance(x, int):
-            return kk[0]
-        else:
-            return kk
-
-    def uci(x, n, alpha):
-        if isinstance(x, int):
-            xs = [x]
-        else:
-            xs = x
-        lcis = lci([n-i for i in xs], n, alpha)
-        upper = [N - i for i in lcis]
-        if isinstance(x, int):
-            return upper[0]
-        else:
-            return upper
     xx = np.arange(n+1)
-    lcin1 = lci(xx, n, alpha/2)
-    ucin1 = uci(xx, n, alpha/2)
-    lcin2 = lci(xx, n, alpha)
-    ucin2 = uci(xx, n, alpha)
+    lcin1 = lci(xx, n, N, alpha/2)
+    ucin1 = uci(xx, n, N, alpha/2)
+    lcin2 = lci(xx, n, N, alpha)
+    ucin2 = uci(xx, n, N, alpha)
     lciw = lcin1
     uciw = ucin1
     xvalue = int(floor(n/2)+1)
@@ -744,20 +829,7 @@ def exact_CI_odd(N, n, x, alpha):
                 uciw[xvalue-1] = ff[0][1]
             lciw[n+1-xvalue] = N - uciw[xvalue-1]
             uciw[n+1-xvalue] = N - lciw[xvalue-1]
-        xvalue = xvalue - 1
-
-    def cpcig(M, lcin, ucin):
-        kk = list(np.arange(len(M)))
-        for i in kk:
-            xx = list(np.arange(n+1))
-            indp = xx
-            uu = 0
-            while (uu < n + 0.5):
-                indp[uu] = ((ind(M[i], lcin[uu], ucin[uu]) *
-                             hypergeom.pmf(uu, N, M[i], n)))
-                uu += 1
-            kk[i] = sum(indp)
-        return kk
+        xvalue -= 1
     lower = int([lciw[i] for i in xx if i == x][0])
     upper = int([uciw[i] for i in xx if i == x][0])
     return (lower, upper)
@@ -785,55 +857,11 @@ def exact_CI_even(N, n, x, alpha):
     upper: int
         upper bound of confidence interval
     """
-    def ind(x, a, b):
-        return (x >= a)*(x <= b)
-
-    def lci(x, n, alpha):
-        if isinstance(x, int):
-            xs = [x]
-        else:
-            xs = x
-        kk = np.arange(0, len(xs)).tolist()
-        for i in kk:
-            if xs[i] < 0.5:
-                kk[i] = 0
-            else:
-                aa = np.arange(0, N+1).tolist()
-                bb = [x+1 for x in aa]
-                bb[1:(N+1)] = hypergeom.cdf(xs[i]-1, N, [x-1 for x in
-                                                         aa[1:(N+1)]], n)
-                cc = []
-                cc.append(aa)
-                cc.append(bb)
-                inds = [i >= (1-alpha) for i in cc[1]]
-                dd = [[], []]
-                dd[0] = [cc[0][i] for i in np.arange(len(inds)) if inds[i]]
-                dd[1] = [cc[1][i] for i in np.arange(len(inds)) if inds[i]]
-                if len(dd[0])*len(dd) == 2:
-                    kk[i] = dd[1][0]
-                else:
-                    kk[i] = max(dd[0])
-        if isinstance(x, int):
-            return kk[0]
-        else:
-            return kk
-
-    def uci(x, n, alpha):
-        if isinstance(x, int):
-            xs = [x]
-        else:
-            xs = x
-        lcis = lci([n-i for i in xs], n, alpha)
-        upper = [N - i for i in lcis]
-        if isinstance(x, int):
-            return upper[0]
-        else:
-            return upper
     xx = np.arange(n+1)
-    lcin1 = lci(xx, n, alpha/2)
-    ucin1 = uci(xx, n, alpha/2)
-    lcin2 = lci(xx, n, alpha)
-    ucin2 = uci(xx, n, alpha)
+    lcin1 = lci(xx, n, N, alpha/2)
+    ucin1 = uci(xx, n, N, alpha/2)
+    lcin2 = lci(xx, n, N, alpha)
+    ucin2 = uci(xx, n, N, alpha)
     lciw = lcin1
     uciw = ucin1
     xvalue = int((n/2)+1)
@@ -849,7 +877,7 @@ def exact_CI_even(N, n, x, alpha):
                 xx = list(np.arange(n+1))
                 indp = xx
                 uu = 0
-                while (uu < n+0.5):
+                while (uu < n + 0.5):
                     indp[uu] = (ind(M[i], lciw[uu], uciw[uu]) *
                                 hypergeom.pmf(uu, N, M[i], n))
                     uu += 1
@@ -866,8 +894,8 @@ def exact_CI_even(N, n, x, alpha):
     uciw[xvalue-1] = N - lciw[xvalue-1]
     xvalue = int(n/2)
     while xvalue > 0.5:
-        al = lcin2[xvalue-1] - lciw[xvalue-1]+1
-        au = int(uciw[xvalue-1] - ucin2[xvalue-1]+1)
+        al = lcin2[xvalue-1]-lciw[xvalue-1]+1
+        au = int(uciw[xvalue-1]-ucin2[xvalue-1]+1)
         if al*au > 1:
             gg = [[], [], [], []]
             for i in np.arange(al):
@@ -877,25 +905,12 @@ def exact_CI_even(N, n, x, alpha):
             ff = [[], [], [], []]
             ff[0] = list(np.concatenate(gg[0]))
             ff[1] = list(np.concatenate(gg[1]))
-            ff[2] = [ff[1][i] - ff[0][i] for i in np.arange(len(ff[0]))]
+            ff[2] = [ff[1][i]-ff[0][i] for i in np.arange(len(ff[0]))]
             for ii in np.arange(len(ff[0])):
                 lciw[xvalue-1] = ff[0][ii]
                 uciw[xvalue-1] = ff[1][ii]
-                lciw[n+1-xvalue] = N - uciw[xvalue-1]
-                uciw[n+1-xvalue] = N - lciw[xvalue-1]
-
-                def cpci(M):
-                    kk = list(np.arange(len(M)))
-                    for i in kk:
-                        xx = list(np.arange(n+1))
-                        indp = xx
-                        uu = 0
-                        while (uu < n + 0.5):
-                            indp[uu] = (ind(M[i], lciw[uu], uciw[uu]) *
-                                        hypergeom.pmf(uu, N, M[i], n))
-                            uu += 1
-                        kk[i] = sum(indp)
-                    return kk
+                lciw[n+1-xvalue] = N-uciw[xvalue-1]
+                uciw[n+1-xvalue] = N-lciw[xvalue-1]
                 M = np.arange(N+1)
                 ff[3].append(min(cpci(M)))
             ff = np.array(ff).T.tolist()
@@ -909,7 +924,7 @@ def exact_CI_even(N, n, x, alpha):
                 uciw[xvalue-1] = ff[0][1]
             lciw[n+1-xvalue] = N - uciw[xvalue-1]
             uciw[n+1-xvalue] = N - lciw[xvalue-1]
-        xvalue = int(xvalue - 1)
+        xvalue -= 1
     lower = [lciw[i] for i in xx if i == x][0]
     upper = [uciw[i] for i in xx if i == x][0]
     return (lower, upper)
@@ -948,7 +963,7 @@ def exact_CI(N, n, x, alpha):
 
 def combin_exact_CI(n11, n10, n01, n00, alpha):
     """
-    Calculate exact CI from observed table.
+    Calculate taus for method 2.1.
 
     Parameters
     ----------
@@ -981,7 +996,7 @@ def combin_exact_CI(n11, n10, n01, n00, alpha):
 
 def N_plus1_exact_CI(n11, n10, n01, n00, alpha):
     """
-    Calculate optimal exact CI from observed table.
+    Calculate taus for method 2.2.
 
     Parameters
     ----------

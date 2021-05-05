@@ -140,9 +140,20 @@ def test_tau_twoside_lower():
     m = n11+n10
     alpha = 0.05
     Z_all = nchoosem(n, m)
-    twoside_lower = tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all)
-    expected_twoside_lower = (-0.0625, [1, 0, 1, 14], 0.375, [0, 7, 1, 8], 48)
-    assert twoside_lower == expected_twoside_lower
+    exact = True
+    reps = 1
+    twoside_lower_exact = tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all,
+                                            exact, reps)
+    expected_twoside_lower_exact = (-0.0625, [1, 0, 1, 14], 0.375,
+                                    [0, 7, 1, 8], 48)
+    exact = False
+    reps = 20
+    twoside_lower_notexact = tau_twoside_lower(n11, n10, n01, n00, alpha,
+                                               Z_all, exact, reps)
+    expected_twoside_lower_notexact = (-0.0625, [1, 0, 1, 14], 0.375,
+                                       [0, 7, 1, 8], 33)
+    assert twoside_lower_exact == expected_twoside_lower_exact
+    assert twoside_lower_notexact == expected_twoside_lower_notexact
 
 
 def test_tau_twoside_less_treated():
@@ -152,25 +163,82 @@ def test_tau_twoside_less_treated():
     n01 = 1
     n00 = 13
     alpha = 0.05
-    nperm = 1000
-    twoside_less_treated = tau_twoside_less_treated(n11, n10, n01, n00, alpha,
-                                                    nperm)
-    expected_twoside_less_treated = (-0.0625, 0.875, [1, 0, 1, 14],
-                                     [1, 14, 0, 1], 103)
-    assert twoside_less_treated == expected_twoside_less_treated
+    exact = True
+    max_combinations = 120
+    reps = 1
+    twoside_less_treated_exact = tau_twoside_less_treated(n11, n10, n01, n00,
+                                                          alpha, exact,
+                                                          max_combinations,
+                                                          reps)
+    expected_twoside_less_treated_exact = (-0.0625, 0.875, [1, 0, 1, 14],
+                                           [1, 14, 0, 1], 103)
+    exact = False
+    reps = 20
+    twoside_less_treated_notexact = tau_twoside_less_treated(n11, n10, n01,
+                                                             n00, alpha, exact,
+                                                             max_combinations,
+                                                             reps)
+    expected_twoside_less_treated_notexact = (-0.0625, 0.875, [1, 0, 1, 14],
+                                              [1, 14, 0, 1], 60)
+    assert twoside_less_treated_exact == expected_twoside_less_treated_exact
+    assert (twoside_less_treated_notexact ==
+            expected_twoside_less_treated_notexact)
+    with pytest.raises(Exception):
+        tau_twoside_less_treated(n11, n10, n01, n00, alpha, True, 100, reps)
 
 
-def test_tau_twosided():
-    """Test tau_twoside_less_treated returns correct taus and N_accepts."""
-    n11 = 1
-    n10 = 1
-    n01 = 1
-    n00 = 13
+def test_tau_twosided_ci():
+    """Test tau_twosided_ci returns correct taus and N_accepts."""
+    n11 = 2
+    n10 = 6
+    n01 = 8
+    n00 = 0
     alpha = 0.05
-    nperm = 1000
-    twoside = tau_twoside(n11, n10, n01, n00, alpha, nperm)
-    expected_twoside = (-0.0625, 0.875, [1, 0, 1, 14], [1, 14, 0, 1], 103)
-    assert twoside == expected_twoside
+    exact = True
+    max_combinations = 12870
+    reps = 1
+    twosided_exact = tau_twosided_ci(n11, n10, n01, n00, alpha, exact,
+                                     max_combinations, reps)
+    expected_twosided_exact = ([-14, -5], [[2, 0, 14, 0], [8, 0, 5, 3]],
+                               [12870, 113])
+    exact = False
+    reps = 20
+    twosided_notexact = tau_twosided_ci(n11, n10, n01, n00, alpha, exact,
+                                        max_combinations, reps)
+    expected_twosided_notexact = ([-14, -7], [[2, 0, 14, 0], [8, 0, 7, 1]],
+                                  [20, 48])
+    assert twosided_exact == expected_twosided_exact
+    assert twosided_notexact == expected_twosided_notexact
+    with pytest.raises(Exception):
+        tau_twosided_ci(n11, n10, n01, n00, alpha, True, 100, reps)
+
+
+def test_ind():
+    """Test that ind returns correct boolean."""
+    assert ind(5, 4, 6)
+    assert not ind(4, 5, 6)
+
+
+def test_lci():
+    """Test that lci returns correct lower bounds."""
+    N = 50
+    n = 10
+    xx = np.arange(n+1)
+    alpha = 0.05
+    lcis = lci(xx, n, N, alpha)
+    expected_lcis = [0, 1, 3, 6, 9, 13, 17, 21, 27, 32, 39]
+    assert lcis == expected_lcis
+
+
+def test_uci():
+    """Test that uci returns correct upper bounds."""
+    N = 50
+    n = 10
+    xx = np.arange(n+1)
+    alpha = 0.05
+    ucis = uci(xx, n, N, alpha)
+    expected_ucis = [11, 18, 23, 29, 33, 37, 41, 44, 47, 49, 50]
+    assert ucis == expected_ucis
 
 
 def test_exact_CI_odd():

@@ -25,15 +25,17 @@ def nchoosem(n, m):
 
     Returns
     -------
-    Z: list
+    Z: numpy array
         re-randomization matrix
     """
     c = comb(n, m)
-    trt = combinations(np.arange(1, n+1), m)
-    Z = [[None]*n for i in np.arange(c)]
+    trt = combinations(np.arange(n), m)
+    Z = np.zeros((c, n), dtype=int)
     for i in np.arange(c):
         co = next(trt)
-        Z[i] = [1 if j in co else 0 for j in np.arange(1, n+1)]
+        for j in np.arange(n):
+            if j in co:
+                Z[i, j] = 1
     return Z
 
 
@@ -52,15 +54,15 @@ def combs(n, m, nperm):
 
     Returns
     -------
-    Z: list
+    Z: numpy array
         sample from re-randomization matrix
     """
-    trt = [[None]*m for i in np.arange(nperm)]
-    Z = [[None]*n for i in np.arange(nperm)]
+    Z = np.zeros((nperm, n))
     for i in np.arange(nperm):
-        trt[i] = np.random.choice(n, m, replace=False).tolist()
-    for i in np.arange(nperm):
-        Z[i] = [1 if j in trt[i] else 0 for j in np.arange(n)]
+        trt = np.random.choice(n, m, replace=False)
+        for j in np.arange(n):
+            if j in trt:
+                Z[i, j] = 1
     return Z
 
 
@@ -74,7 +76,7 @@ def pval_one_lower(n, m, N, Z_all, tau_obs):
         total number of subjects
     m: int
         number of subjects under treatment
-    N: list
+    N: numpy array
         potential table
     Z_all: list
         re-randomization or sample of re-randomization matrix
@@ -87,36 +89,23 @@ def pval_one_lower(n, m, N, Z_all, tau_obs):
         p-value
     """
     n_Z_all = len(Z_all)
-    dat = [[None]*2 for i in np.arange(n)]
+    dat = np.zeros((n, 2), dtype=int)
     if N[0] > 0:
-        for i in np.arange(N[0]):
-            dat[i] = [1]*2
+        dat[0:N[0], :] = 1
     if N[1] > 0:
         for i in np.arange(N[0], N[0]+N[1]):
-            dat[i][0] = 1
-            dat[i][1] = 0
+            dat[i, 0] = 1
+            dat[i, 1] = 0
     if N[2] > 0:
         for i in np.arange(N[0]+N[1], N[0]+N[1]+N[2]):
-            dat[i][0] = 0
-            dat[i][1] = 1
+            dat[i, 0] = 0
+            dat[i, 1] = 1
     if N[3] > 0:
         for i in np.arange(N[0]+N[1]+N[2], sum(N)):
             dat[i] = [0]*2
-    x = [i[0]/m for i in dat]
-    y = [i[1]/(n-m) for i in dat]
-    a = []
-    b = []
-    for i in np.arange(len(Z_all)):
-        a.append(sum([x[j]*Z_all[i][j] for j in np.arange(len(x))]))
-        b.append(sum([(1-Z_all[i][j])*y[j] for j in np.arange(len(y))]))
-    tau_hat = [a[i]-b[i] for i in np.arange(len(a))]
-    if isinstance(tau_obs, list):
-        count = sum([1 if round(tau_hat[i], 15) >= round(tau_obs[i], 15) else 0
-                     for i in np.arange(len(tau_hat))])
-    else:
-        count = sum([1 if round(tau_hat[i], 15) >= round(tau_obs, 15) else 0
-                     for i in np.arange(len(tau_hat))])
-    pl = count/n_Z_all
+    tau_hat = np.matmul(Z_all, dat[:, 0]/m) - np.matmul((1 - Z_all),
+                                                        dat[:, 1]/(n-m))
+    pl = sum(np.round(tau_hat, 15) >= round(tau_obs, 15))/n_Z_all
     return pl
 
 
@@ -130,7 +119,7 @@ def pval_two(n, m, N, Z_all, tau_obs):
         total number of subjects
     m: int
         number of subjects under treatment
-    N: list
+    N: numpy array
         potential table
     Z_all: list
         re-randomization or sample of re-randomization matrix
@@ -143,34 +132,25 @@ def pval_two(n, m, N, Z_all, tau_obs):
         p-value
     """
     n_Z_all = len(Z_all)
-    dat = [[None]*2 for i in np.arange(n)]
+    dat = np.zeros((n, 2), dtype=int)
     if N[0] > 0:
-        for i in np.arange(N[0]):
-            dat[i] = [1]*2
+        dat[0:N[0], :] = 1
     if N[1] > 0:
         for i in np.arange(N[0], N[0]+N[1]):
-            dat[i][0] = 1
-            dat[i][1] = 0
+            dat[i, 0] = 1
+            dat[i, 1] = 0
     if N[2] > 0:
         for i in np.arange(N[0]+N[1], N[0]+N[1]+N[2]):
-            dat[i][0] = 0
-            dat[i][1] = 1
+            dat[i, 0] = 0
+            dat[i, 1] = 1
     if N[3] > 0:
         for i in np.arange(N[0]+N[1]+N[2], sum(N)):
-            dat[int(i)] = [0]*2
-    x = [i[0]/m for i in dat]
-    y = [i[1]/(n-m) for i in dat]
-    a = []
-    b = []
-    for i in np.arange(len(Z_all)):
-        a.append(sum([x[j]*Z_all[i][j] for j in np.arange(len(x))]))
-        b.append(sum([(1-Z_all[i][j])*y[j] for j in np.arange(len(y))]))
-    tau_hat = [a[i]-b[i] for i in np.arange(len(a))]
+            dat[i] = [0]*2
+    tau_hat = np.matmul(Z_all, dat[:, 0]/m) - np.matmul((1 - Z_all),
+                                                        dat[:, 1]/(n-m))
     tau_N = (N[1]-N[2])/n
-    count = sum([1 if round(abs(tau_hat[i]-tau_N), 14) >=
-                 round(abs(tau_obs-tau_N), 14) else 0
-                 for i in np.arange(len(tau_hat))])
-    pd = count/n_Z_all
+    pd = sum(np.round(abs(tau_hat-tau_N), 15) >= round(abs(tau_obs-tau_N),
+                                                       15))/n_Z_all
     return pd
 
 
@@ -188,13 +168,13 @@ def check_compatible(n11, n10, n01, n00, N11, N10, N01):
         number of subjects under control that experienced outcome 1
     n00: int
         number of subjects under control that experienced outcome 0
-    N11: list of integers
+    N11: numpy array of integers
         number of subjects under control and treatment with potential outcome 1
         outcome 1
-    N10: list of integers
+    N10: numpy array of integers
         potential number of subjects under treatment that experienced
         outcome 0
-    N01: list of integers
+    N01: numpy array of integers
         potential number of subjects under treatment that experienced
         outcome 0
 
@@ -205,20 +185,19 @@ def check_compatible(n11, n10, n01, n00, N11, N10, N01):
     """
     n = n11+n10+n01+n00
     n_t = len(N10)
-    lefts = [[] for i in np.arange(len(N10))]
-    rights = [[] for i in np.arange(len(N10))]
-    for i in np.arange(len(N10)):
-        lefts[i].append(0)
-        rights[i].append(N11[i])
-        lefts[i].append(n11 - N10[i])
-        rights[i].append(n11)
-        lefts[i].append(N11[i]-n01)
-        rights[i].append(N11[i]+N01[i]-n01)
-        lefts[i].append(N11[i]+N01[i]-n10-n01)
-        rights[i].append(n-N10[i]-n01-n10)
-    left = [max(x) for x in lefts]
-    right = [min(x) for x in rights]
-    compact = [left[i] <= right[i] for i in np.arange(len(left))]
+    lefts = np.empty((n_t, 4), dtype=int)
+    lefts[:, 0] = 0
+    lefts[:, 1] = n11-N10
+    lefts[:, 2] = N11-n01
+    lefts[:, 3] = N11+N01-n10-n01
+    rights = np.empty((n_t, 4), dtype=int)
+    rights[:, 0] = N11
+    rights[:, 1] = n11
+    rights[:, 2] = N11+N01-n01
+    rights[:, 3] = n-N10-n01-n10
+    left = np.max(lefts, axis=1)
+    right = np.min(rights, axis=1)
+    compact = left <= right
     return compact
 
 
@@ -238,7 +217,7 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
         number of subjects under control that experienced outcome 0
     N11: int
         number of subjects under control and treatment with potential outcome 1
-    Z_all: list
+    Z_all: numpy array
         re-randomization or sample of re-randomization matrix
     alpha: float
         1 - confidence level
@@ -247,7 +226,7 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
     -------
     tau_min: float
         minimum tau value of accepted potential tables
-    N_accept:
+    N_accept: numpy array
         accepted potential table
     """
     n = n11+n10+n01+n00
@@ -255,9 +234,9 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
     N01 = 0
     N10 = 0
     tau_obs = n11/m - n01/(n-m)
-    M = [0]*(n-N11+1)
-    while (N10 <= (n-N11-N01)) & (N01 <= (n-N11)):
-        pl = pval_one_lower(n, m, [N11, N10, N01, n-(N11 + N10 + N01)],
+    M = np.zeros(n-N11+1, dtype=int)
+    while (N10 <= (n-N11-N01)) and (N01 <= (n-N11)):
+        pl = pval_one_lower(n, m, [N11, N10, N01, n-(N11+N10+N01)],
                             Z_all, tau_obs)
         if pl >= alpha:
             M[N01] = N10
@@ -267,35 +246,31 @@ def tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha):
     if N01 <= (n - N11):
         for i in np.arange(N01, (n-N11+1)):
             M[i] = n+1
-    N11_vec0 = [N11]*(n-N11+1)
+    N11_vec0 = np.full((n-N11+1), N11)
     N10_vec0 = M
-    N01_vec0 = np.arange((n-N11+1)).tolist()
-    N11_vec = []
-    N10_vec = []
-    N01_vec = []
+    N01_vec0 = np.arange(n-N11+1)
+    N11_vec = np.empty(0, dtype=int)
+    N10_vec = np.empty(0, dtype=int)
+    N01_vec = np.empty(0, dtype=int)
     for i in np.arange(len(N11_vec0)):
-        if N10_vec0[i] <= (n - N11_vec0[i] - N01_vec0[i]):
-            N10_vec.extend(np.arange(N10_vec0[i], n-N11_vec0[i]-N01_vec0[i]+1)
-                           .tolist())
-            N11_vec.extend([N11_vec0[i]]*(n-N11_vec0[i]-N01_vec0[i]-N10_vec0[i]
-                                          + 1))
-            N01_vec.extend([N01_vec0[i]]*(n-N11_vec0[i]-N01_vec0[i]-N10_vec0[i]
-                                          + 1))
+        if N10_vec0[i] <= (n-N11_vec0[i]-N01_vec0[i]):
+            N10_vec = np.append(N10_vec, np.arange(N10_vec0[i], n-N11_vec0[i] -
+                                                   N01_vec0[i]+1))
+            N11_vec = np.append(N11_vec, np.full((n-N11_vec0[i]-N01_vec0[i] -
+                                                  N10_vec0[i]+1),
+                                                 N11_vec0[i]))
+            N01_vec = np.append(N01_vec, np.full((n-N11_vec0[i]-N01_vec0[i] -
+                                                  N10_vec0[i]+1), N01_vec0[i]))
     compat = check_compatible(n11, n10, n01, n00, N11_vec, N10_vec, N01_vec)
     if sum(compat) > 0:
-        N10_vec_compat = [N10_vec[i] for i in np.arange(len(N10_vec)) if
-                          compat[i]]
-        N01_vec_compat = [N01_vec[i] for i in np.arange(len(N10_vec)) if
-                          compat[i]]
-        tau_min = min([N10_vec_compat[i]-N01_vec_compat[i] for i in
-                       np.arange(len(N10_vec_compat))])/n
-        accept_pos = [i for i in np.arange(len(N10_vec_compat)) if
-                      N10_vec_compat[i]-N01_vec_compat[i] == n*tau_min]
+        tau_min = min(N10_vec[compat] - N01_vec[compat])/n
+        accept_pos = np.flatnonzero(N10_vec[compat]-N01_vec[compat] ==
+                                    n*tau_min)
         accept_pos = accept_pos[0]
-        N_accept = [N11, N10_vec_compat[accept_pos],
-                    N01_vec_compat[accept_pos],
-                    n-(N11+N10_vec_compat[accept_pos] +
-                       N01_vec_compat[accept_pos])]
+        N_accept = np.array([N11, N10_vec[compat][accept_pos],
+                             N01_vec[compat][accept_pos],
+                             n-(N11+N10_vec[compat][accept_pos] +
+                                N01_vec[compat][accept_pos])])
     else:
         tau_min = (n11 + n00)/n
         N_accept = float('NaN')
@@ -327,7 +302,7 @@ def tau_lower_oneside(n11, n10, n01, n00, alpha, nperm):
         left-side tau for one-sided confidence interval
     tau_upper: float
         right-side tau for one-sided confidence interval
-    N_accept:
+    N_accept: numpy array
         accepted potential table for one-sided confidence interval
     """
     n = n11+n10+n01+n00
@@ -365,7 +340,7 @@ def tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha):
         number of subjects under control that experienced outcome 0
     N11: int
         number of subjects under control and treatment with potential outcome 1
-    Z_all: list
+    Z_all: numpy array
         re-randomization or sample of re-randomization matrix
     alpha: float
         1 - confidence level
@@ -376,9 +351,9 @@ def tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha):
         minimum tau value of accepted potential tables
     tau_max: float
         minimum tau value of accepted potential tables
-    N_accept_min: list
+    N_accept_min: numpy array
         minimum accepted potential table
-    N_accept_max: list
+    N_accept_max: numpy array
         maximum accepted potential table
     rand_test_num: int
         number of tests run
@@ -388,73 +363,64 @@ def tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha):
     tau_obs = n11/m - n01/(n-m)
     ntau_obs = n*n11/m - n*n01/(n-m)
     N10 = 0
-    N01_vec0 = [i for i in np.arange(n-N11+1) if i >= (-ntau_obs)]
+    N01_vec0 = np.arange(n-N11+1)[np.arange(n-N11+1) >= -ntau_obs]
     N01 = min(N01_vec0)
-    M = [float('NaN')]*len(N01_vec0)
+    M = np.empty(len(N01_vec0), dtype=int)
     rand_test_num = 0
-    while (N10 <= (n-N11-N01)) & (N01 <= (n-N11)):
+    while (N10 <= (n-N11-N01)) and (N01 <= (n-N11)):
         if N10 <= (N01+ntau_obs):
             pl = pval_two(n, m, [N11, N10, N01, n-(N11 + N10 + N01)], Z_all,
                           tau_obs)
             rand_test_num += 1
             if pl >= alpha:
-                for i in np.arange(len(M)):
-                    if N01_vec0[i] == N01:
-                        M[i] = N10
+                M[N01_vec0 == N01] = N10
                 N01 += 1
             else:
                 N10 += 1
         else:
-            for i in np.arange(len(M)):
-                if N01_vec0[i] == N01:
-                    M[i] = N10
+            M[N01_vec0 == N01] = N10
             N01 += 1
     if N01 <= (n-N11):
-        for i in np.arange(len(M)):
-            if N01_vec0[i] >= N01:
-                M[i] = floor(N01_vec0[i]+ntau_obs)+1
-    N11_vec0 = [N11]*len(N01_vec0)
+        M[N01_vec0 >= N01] = np.floor(N01_vec0[N01_vec0 >= N01]+ntau_obs)+1
+        N11_vec0 = [N11]*len(N01_vec0)
+    N11_vec0 = np.full(len(N01_vec0), N11)
     N10_vec0 = M
-    N11_vec = []
-    N10_vec = []
-    N01_vec = []
+    N11_vec = np.empty(0, dtype=int)
+    N10_vec = np.empty(0, dtype=int)
+    N01_vec = np.empty(0, dtype=int)
     for i in np.arange(len(N11_vec0)):
-        N10_upper = min((n-N11_vec0[i]-N01_vec0[i]), floor(N01_vec0[i] +
-                                                           ntau_obs))
+        N10_upper = int(min((n-N11_vec0[i]-N01_vec0[i]), np.floor(N01_vec0[i] +
+                                                                  ntau_obs)))
         if N10_vec0[i] <= N10_upper:
-            N10_vec.extend(np.arange(N10_vec0[i], N10_upper+1).tolist())
-            N11_vec.extend([N11_vec0[i]]*(N10_upper-N10_vec0[i]+1))
-            N01_vec.extend([N01_vec0[i]]*(N10_upper-N10_vec0[i]+1))
+            N10_vec = np.append(N10_vec, np.arange(N10_vec0[i], N10_upper+1))
+            N11_vec = np.append(N11_vec, np.full((N10_upper-N10_vec0[i]+1),
+                                                 N11_vec0[i]))
+            N01_vec = np.append(N01_vec, np.full((N10_upper-N10_vec0[i]+1),
+                                                 N01_vec0[i]))
     compat = check_compatible(n11, n10, n01, n00, N11_vec, N10_vec, N01_vec)
     if sum(compat) > 0:
-        N10_vec_compat = [N10_vec[i] for i in np.arange(len(N10_vec)) if
-                          compat[i]]
-        N01_vec_compat = [N01_vec[i] for i in np.arange(len(N10_vec)) if
-                          compat[i]]
-        tau_min = min([N10_vec_compat[i]-N01_vec_compat[i] for i in
-                       np.arange(len(N10_vec_compat))])/n
-        accept_pos = [i for i in np.arange(len(N10_vec_compat)) if
-                      N10_vec_compat[i]-N01_vec_compat[i] == n*tau_min]
+        tau_min = min(N10_vec[compat] - N01_vec[compat])/n
+        accept_pos = np.flatnonzero(N10_vec[compat]-N01_vec[compat] ==
+                                    n*tau_min)
         accept_pos = accept_pos[0]
-        N_accept_min = [N11, N10_vec_compat[accept_pos],
-                        N01_vec_compat[accept_pos],
-                        n-(N11+N10_vec_compat[accept_pos] +
-                           N01_vec_compat[accept_pos])]
+        N_accept_min = np.array([N11, N10_vec[compat][accept_pos],
+                                 N01_vec[compat][accept_pos],
+                                 n-(N11+N10_vec[compat][accept_pos] +
+                                    N01_vec[compat][accept_pos])])
 
-        tau_max = max([N10_vec_compat[i] - N01_vec_compat[i] for i in
-                       np.arange(len(N10_vec_compat))])/n
-        accept_pos = [i for i in np.arange(len(N10_vec_compat)) if
-                      N10_vec_compat[i]-N01_vec_compat[i] == n*tau_max]
+        tau_max = max(N10_vec[compat] - N01_vec[compat])/n
+        accept_pos = np.flatnonzero(N10_vec[compat]-N01_vec[compat] ==
+                                    n*tau_max)
         accept_pos = accept_pos[0]
-        N_accept_max = [N11, N10_vec_compat[accept_pos],
-                        N01_vec_compat[accept_pos],
-                        n-(N11+N10_vec_compat[accept_pos] +
-                           N01_vec_compat[accept_pos])]
+        N_accept_max = np.array([N11, N10_vec[compat][accept_pos],
+                                 N01_vec[compat][accept_pos],
+                                 n-(N11+N10_vec[compat][accept_pos] +
+                                    N01_vec[compat][accept_pos])])
     else:
-        tau_min = float('inf')
-        N_accept_min = float('NaN')
-        tau_max = float('-inf')
-        N_accept_max = float('NaN')
+        tau_min = np.inf
+        N_accept_min = np.nan
+        tau_max = np.NINF
+        N_accept_max = np.nan
     return (tau_min, tau_max, N_accept_min, N_accept_max, rand_test_num)
 
 
@@ -474,7 +440,7 @@ def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all, exact, reps):
         number of subjects under control that experienced outcome 0
     alpha: float
         1 - confidence level
-    Z_all: list
+    Z_all: numpy array
         re-randomization or sample of re-randomization matrix
     exact: boolean
         whether or not to calculate exact confidence interval
@@ -485,11 +451,11 @@ def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all, exact, reps):
     -------
     tau_lower: float
         left-side tau for two-sided confidence interval
-    N_accept_lower: list
+    N_accept_lower: numpy array
         left-side accepted potential table for two-sided confidence interval
     tau_upper: float
         right-side tau for two-sided confidence interval
-    N_accept_upper: list
+    N_accept_upper: numpy array
         right-side accepted potential table for two-sided confidence interval
     rand_test_total: int
         number of tests run
@@ -498,10 +464,10 @@ def tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all, exact, reps):
     m = n11+n10
     tau_obs = n11/m - n01/(n-m)
     ntau_obs = n*n11/m - n*n01/(n-m)
-    tau_min = float('inf')
-    tau_max = float('-inf')
-    N_accept_min = float('NaN')
-    N_accept_max = float('NaN')
+    tau_min = np.inf
+    tau_max = np.NINF
+    N_accept_min = np.nan
+    N_accept_max = np.nan
     rand_test_total = 0
     for N11 in np.arange(int(min(n11+n01, n+ntau_obs))+1):
         tau_min_N11 = tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all,
@@ -542,9 +508,9 @@ def tau_twoside_less_treated(n11, n10, n01, n00, alpha, exact,
         1 - confidence level
     exact: boolean
         whether or not to calculate exact confidence interval
-    max_combinations:
+    max_combinations: int
         if exact = True, maximum desired number of combinations
-    reps:
+    reps: int
         if exact = False, number of simulations per table
 
     Returns
@@ -553,9 +519,9 @@ def tau_twoside_less_treated(n11, n10, n01, n00, alpha, exact,
         left-side tau for two-sided confidence interval
     tau_upper: float
         right-side tau for two-sided confidence interval
-    N_accept_lower: list
+    N_accept_lower: numpy array
         left-side accepted potential table for two-sided confidence interval
-    N_accept_upper: list
+    N_accept_upper: numpy array
         right-side accepted potential table for two-sided confidence interval
     rand_test_total: int
         number of tests run
@@ -582,9 +548,9 @@ def tau_twoside_less_treated(n11, n10, n01, n00, alpha, exact,
     if tau_lower == ci_lower[0]:
         N_accept_lower = ci_lower[1]
     else:
-        N_accept_lower = ci_upper[3][::-1]
+        N_accept_lower = np.flip(ci_upper[3])
     if tau_upper == -1*ci_upper[0]:
-        N_accept_upper = ci_upper[1][::-1]
+        N_accept_upper = np.flip(ci_upper[1])
     else:
         N_accept_upper = ci_lower[3]
     return (tau_lower, tau_upper, N_accept_lower, N_accept_upper,
@@ -609,9 +575,9 @@ def tau_twosided_ci(n11, n10, n01, n00, alpha, exact, max_combinations, reps):
         1 - confidence level
     exact: boolean
         whether or not to calculate exact confidence interval
-    max_combinations:
+    max_combinations: int
         if exact = True, maximum desired number of combinations
-    reps:
+    reps: int
         if exact = False, number of simulations per table
 
     Returns
@@ -650,7 +616,8 @@ def tau_twosided_ci(n11, n10, n01, n00, alpha, exact, max_combinations, reps):
     else:
         num_tables = len(combs(n, m, reps))
     return ([int(tau_lower*n), int(tau_upper*n)],
-            [N_accept_lower, N_accept_upper], [num_tables, rand_test_total])
+            [N_accept_lower.tolist(), N_accept_upper.tolist()],
+            [num_tables, rand_test_total])
 
 
 def ind(x, a, b):
@@ -679,7 +646,7 @@ def lci(x, n, N, alpha):
 
     Parameters
     ----------
-    x: int/list
+    x: int/numpy array
         number(s) of good items in the sample
     n: int
         sample size
@@ -690,31 +657,23 @@ def lci(x, n, N, alpha):
 
     Returns
     -------
-    kk: int/list
+    kk: int/numpy array
         lower bound(s)
     """
     if isinstance(x, int):
-        xs = [x]
-    else:
-        xs = x
-    kk = np.arange(0, len(xs)).tolist()
+        x = np.array([x])
+    kk = np.arange(0, len(x))
     for i in kk:
-        if xs[i] < 0.5:
+        if x[i] < 0.5:
             kk[i] = 0
         else:
-            aa = np.arange(0, N+1).tolist()
-            bb = [x+1 for x in aa]
-            bb[1:(N+1)] = hypergeom.cdf(xs[i]-1, N, [x-1 for x in
-                                                     aa[1:(N+1)]], n)
-            cc = []
-            cc.append(aa)
-            cc.append(bb)
-            inds = [i >= (1-alpha) for i in cc[1]]
-            dd = [[], []]
-            dd[0] = [cc[0][i] for i in np.arange(len(inds)) if inds[i]]
-            dd[1] = [cc[1][i] for i in np.arange(len(inds)) if inds[i]]
-            if len(dd[0])*len(dd) == 2:
-                kk[i] = dd[1][0]
+            aa = np.arange(0, N+1)
+            bb = (aa + 1).astype(np.float64)
+            bb[1:(N+1)] = hypergeom.cdf(x[i]-1, N, aa[1:(N+1)]-1, n)
+            dd = np.vstack((aa, bb))
+            dd = dd[:, dd[1] >= (1-alpha)]
+            if dd.shape[0]*dd.shape[1] == 2:
+                kk[i] = dd[0, 0]
             else:
                 kk[i] = max(dd[0])
     if isinstance(x, int):
@@ -729,7 +688,7 @@ def uci(x, n, N, alpha):
 
     Parameters
     ----------
-    x: int/list
+    x: int/numpy array
         number(s) of good items in the sample
     n: int
         sample size
@@ -740,15 +699,15 @@ def uci(x, n, N, alpha):
 
     Returns
     -------
-    kk: int/list
+    kk: int/numpy array
         upper bound(s)
     """
     if isinstance(x, int):
         xs = [x]
     else:
         xs = x
-    lcis = lci([n-i for i in xs], n, N, alpha)
-    upper = [N - i for i in lcis]
+    lcis = lci(n-x, n, N, alpha)
+    upper = N - lcis
     if isinstance(x, int):
         return upper[0]
     else:
@@ -785,30 +744,29 @@ def exact_CI_odd(N, n, x, alpha):
     lciw = lcin1
     uciw = ucin1
     xvalue = int(floor(n/2)+1)
-    while xvalue > 0.5:
-        al = lcin2[xvalue-1]-lciw[xvalue-1]+1
-        au = int(uciw[xvalue-1] - ucin2[xvalue-1]+1)
+    while xvalue > -0.5:
+        al = lcin2[xvalue]-lciw[xvalue]+1
+        au = int(uciw[xvalue] - ucin2[xvalue]+1)
         if al*au > 1:
-            gg = [[], [], [], []]
+            ff = np.zeros((al*au, 4))
             for i in np.arange(al):
-                gg[0].append([lciw[xvalue-1]+i]*au)
-                gg[1].append(list(np.arange(ucin2[xvalue-1],
-                                            uciw[xvalue-1]+1)))
-            ff = [[], [], [], []]
-            ff[0] = list(np.concatenate(gg[0]))
-            ff[1] = list(np.concatenate(gg[1]))
-            ff[2] = [ff[1][i] - ff[0][i] for i in np.arange(len(ff[0]))]
-            for ii in np.arange(len(ff[0])):
-                lciw[xvalue-1] = ff[0][ii]
-                uciw[xvalue-1] = ff[1][ii]
-                lciw[n+1-xvalue] = N - uciw[xvalue-1]
-                uciw[n+1-xvalue] = N - lciw[xvalue-1]
+                ff[np.arange(i*au, i*au+au), 0] = lciw[xvalue]+i
+                ff[np.arange(i*au, i*au+au), 1] = np.arange(ucin2[xvalue],
+                                                            uciw[xvalue]+1)
+                ff[np.arange(i*au, i*au+au), 2] = (
+                    ff[np.arange(i*au, i*au+au), 1] -
+                    ff[np.arange(i*au, i*au+au), 0])
+            for ii in np.arange(len(ff)):
+                lciw[xvalue] = ff[ii, 0]
+                uciw[xvalue] = ff[ii, 1]
+                lciw[n-xvalue] = N-uciw[xvalue]
+                uciw[n-xvalue] = N-lciw[xvalue]
 
                 def cpci(M):
-                    kk = list(np.arange(len(M)))
-                    for i in kk:
-                        xx = list(np.arange(n+1))
-                        indp = xx
+                    kk = np.arange(len(M)).astype(np.float64)
+                    for i in np.arange(len(M)):
+                        xx = np.arange(n+1)
+                        indp = xx.astype(np.float64)
                         uu = 0
                         while (uu < n + 0.5):
                             indp[uu] = (ind(M[i], lciw[uu], uciw[uu]) *
@@ -817,21 +775,20 @@ def exact_CI_odd(N, n, x, alpha):
                         kk[i] = sum(indp)
                     return kk
                 M = np.arange(N+1)
-                ff[3].append(min(cpci(M)))
-            ff = np.array(ff).T.tolist()
-            ff[:] = [x for x in ff if x[3] >= (1-alpha)]
-            if len(ff[0])*len(ff) > 4:
+                ff[ii, 3] = min(cpci(M))
+            ff = ff[ff[:, 3] >= (1-alpha), :]
+            if ff.shape[0]*ff.shape[1] > 4:
                 ff = sorted(ff, key=lambda x: x[2])
-                lciw[xvalue-1] = ff[0][0]
-                uciw[xvalue-1] = ff[0][1]
+                lciw[xvalue] = ff[0][0]
+                uciw[xvalue] = ff[0][1]
             else:
-                lciw[xvalue-1] = ff[0][0]
-                uciw[xvalue-1] = ff[0][1]
-            lciw[n+1-xvalue] = N - uciw[xvalue-1]
-            uciw[n+1-xvalue] = N - lciw[xvalue-1]
+                lciw[xvalue] = ff[0][0]
+                uciw[xvalue] = ff[0][1]
+            lciw[n-xvalue] = N - uciw[xvalue]
+            uciw[n-xvalue] = N - lciw[xvalue]
         xvalue -= 1
-    lower = int([lciw[i] for i in xx if i == x][0])
-    upper = int([uciw[i] for i in xx if i == x][0])
+    lower = lciw[xx == x]
+    upper = uciw[xx == x]
     return (lower, upper)
 
 
@@ -864,18 +821,18 @@ def exact_CI_even(N, n, x, alpha):
     ucin2 = uci(xx, n, N, alpha)
     lciw = lcin1
     uciw = ucin1
-    xvalue = int((n/2)+1)
-    aa = np.arange(lciw[xvalue-1], floor(N/2)+1)
+    xvalue = int((n/2))
+    aa = np.arange(lciw[xvalue], floor(N/2)+1)
     ii = 1
     while ii < (len(aa) + 0.5):
-        lciw[xvalue-1] = aa[ii - 1]
-        uciw[xvalue-1] = N - aa[ii - 1]
+        lciw[xvalue] = aa[ii - 1]
+        uciw[xvalue] = N - aa[ii - 1]
 
         def cpci(M):
-            kk = list(np.arange(len(M)))
-            for i in kk:
-                xx = list(np.arange(n+1))
-                indp = xx
+            kk = np.arange(len(M)).astype(np.float64)
+            for i in np.arange(len(M)):
+                xx = np.arange(n+1)
+                indp = xx.astype(np.float64)
                 uu = 0
                 while (uu < n + 0.5):
                     indp[uu] = (ind(M[i], lciw[uu], uciw[uu]) *
@@ -883,50 +840,62 @@ def exact_CI_even(N, n, x, alpha):
                     uu += 1
                 kk[i] = sum(indp)
             return kk
-        M = list(np.arange(N+1))
+        M = np.arange(N+1)
         bb = min(cpci(M))
         if (bb >= 1-alpha):
             ii1 = ii
             ii += 1
         else:
             ii = len(aa) + 1
-    lciw[xvalue-1] = aa[ii1-1]
-    uciw[xvalue-1] = N - lciw[xvalue-1]
-    xvalue = int(n/2)
-    while xvalue > 0.5:
-        al = lcin2[xvalue-1]-lciw[xvalue-1]+1
-        au = int(uciw[xvalue-1]-ucin2[xvalue-1]+1)
+    lciw[xvalue] = aa[ii1-1]
+    uciw[xvalue] = N - lciw[xvalue]
+    xvalue = int((n/2)-1)
+    while xvalue > -0.5:
+        al = lcin2[xvalue]-lciw[xvalue]+1
+        au = int(uciw[xvalue]-ucin2[xvalue]+1)
         if al*au > 1:
-            gg = [[], [], [], []]
+            ff = np.zeros((al*au, 4))
             for i in np.arange(al):
-                gg[0].append([lciw[xvalue-1]+i]*au)
-                gg[1].append(list(np.arange(ucin2[xvalue-1],
-                                            uciw[xvalue-1]+1)))
-            ff = [[], [], [], []]
-            ff[0] = list(np.concatenate(gg[0]))
-            ff[1] = list(np.concatenate(gg[1]))
-            ff[2] = [ff[1][i]-ff[0][i] for i in np.arange(len(ff[0]))]
-            for ii in np.arange(len(ff[0])):
-                lciw[xvalue-1] = ff[0][ii]
-                uciw[xvalue-1] = ff[1][ii]
-                lciw[n+1-xvalue] = N-uciw[xvalue-1]
-                uciw[n+1-xvalue] = N-lciw[xvalue-1]
+                ff[np.arange(i*au, i*au+au), 0] = lciw[xvalue]+i
+                ff[np.arange(i*au, i*au+au), 1] = np.arange(ucin2[xvalue],
+                                                            uciw[xvalue]+1)
+                ff[np.arange(i*au, i*au+au), 2] = (
+                    ff[np.arange(i*au, i*au+au), 1] -
+                    ff[np.arange(i*au, i*au+au), 0])
+            for ii in np.arange(len(ff)):
+                lciw[xvalue] = ff[ii, 0]
+                uciw[xvalue] = ff[ii, 1]
+                lciw[n-xvalue] = N-uciw[xvalue]
+                uciw[n-xvalue] = N-lciw[xvalue]
+
+                def cpci(M):
+                    kk = np.arange(len(M)).astype(np.float64)
+                    for i in np.arange(len(M)):
+                        xx = np.arange(n+1)
+                        indp = xx.astype(np.float64)
+                        uu = 0
+                        while (uu < n + 0.5):
+                            indp[uu] = (ind(M[i], lciw[uu], uciw[uu]) *
+                                        hypergeom.pmf(uu, N, M[i], n))
+                            uu += 1
+                        kk[i] = sum(indp)
+                    return kk
                 M = np.arange(N+1)
-                ff[3].append(min(cpci(M)))
-            ff = np.array(ff).T.tolist()
-            ff[:] = [x for x in ff if x[3] >= (1-alpha)]
-            if len(ff[0])*len(ff) > 4:
+                ff[ii, 3] = min(cpci(M))
+            ff = ff[ff[:, 3] >= (1-alpha), :]
+            print(ff)
+            if ff.shape[0]*ff.shape[1] > 4:
                 ff = sorted(ff, key=lambda x: x[2])
-                lciw[xvalue-1] = ff[0][0]
-                uciw[xvalue-1] = ff[0][1]
+                lciw[xvalue] = ff[0][0]
+                uciw[xvalue] = ff[0][1]
             else:
-                lciw[xvalue-1] = ff[0][0]
-                uciw[xvalue-1] = ff[0][1]
-            lciw[n+1-xvalue] = N - uciw[xvalue-1]
-            uciw[n+1-xvalue] = N - lciw[xvalue-1]
+                lciw[xvalue] = ff[0][0]
+                uciw[xvalue] = ff[0][1]
+            lciw[n-xvalue] = N - uciw[xvalue]
+            uciw[n-xvalue] = N - lciw[xvalue]
         xvalue -= 1
-    lower = [lciw[i] for i in xx if i == x][0]
-    upper = [uciw[i] for i in xx if i == x][0]
+    lower = lciw[xx == x]
+    upper = uciw[xx == x]
     return (lower, upper)
 
 
@@ -1028,8 +997,8 @@ def N_plus1_exact_CI(n11, n10, n01, n00, alpha):
             N01 = N_plus1-N11
             for N10 in np.arange(n-N_plus1+1):
                 N00 = n-N_plus1-N10
-                if check_compatible(n11, n10, n01, n00, [N11], [N10],
-                                    [N01])[0]:
+                if check_compatible(n11, n10, n01, n00, np.array([N11]),
+                                    np.array([N10]), np.array([N01]))[0]:
                     tau = (N10-N01)/n
                     tau_min = min(tau, tau_min)
                     tau_max = max(tau, tau_max)

@@ -15,12 +15,12 @@ def test_nchoosem():
     n = 5
     m = 3
     Z = nchoosem(n, m)
-    expected = [[1, 1, 1, 0, 0], [1, 1, 0, 1, 0],
-                [1, 1, 0, 0, 1], [1, 0, 1, 1, 0],
-                [1, 0, 1, 0, 1], [1, 0, 0, 1, 1],
-                [0, 1, 1, 1, 0], [0, 1, 1, 0, 1],
-                [0, 1, 0, 1, 1], [0, 0, 1, 1, 1]]
-    assert Z == expected
+    expected_Z = np.array([[1, 1, 1, 0, 0], [1, 1, 0, 1, 0],
+                           [1, 1, 0, 0, 1], [1, 0, 1, 1, 0],
+                           [1, 0, 1, 0, 1], [1, 0, 0, 1, 1],
+                           [0, 1, 1, 1, 0], [0, 1, 1, 0, 1],
+                           [0, 1, 0, 1, 1], [0, 0, 1, 1, 1]])
+    np.testing.assert_array_equal(Z, expected_Z)
 
 
 def test_combs():
@@ -29,8 +29,9 @@ def test_combs():
     m = 3
     nperm = 10
     Z = combs(n, m, nperm)
-    for x in Z:
-        assert sum(x) == m
+    Z_sum = np.sum(Z, axis=1)
+    expected_Z_sum = np.full(nperm, m)
+    np.testing.assert_equal(Z_sum, expected_Z_sum)
 
 
 def test_pval_one_lower():
@@ -44,12 +45,12 @@ def test_pval_one_lower():
     N01 = 0
     N10 = 0
     N11 = 2
-    N = [N11, N10, N01, n-(N11+N10+N01)]
+    N = np.array([N11, N10, N01, n-(N11+N10+N01)])
     Z_all = nchoosem(n, m)
     tau_obs = n11/m - n01/(n-m)
     pval = pval_one_lower(n, m, N, Z_all, tau_obs)
-    expected = 0.23684210526315788
-    assert pval == expected
+    expected_pval = 0.23684210526315788
+    np.testing.assert_equal(pval, expected_pval)
 
 
 def test_pval_two():
@@ -63,12 +64,12 @@ def test_pval_two():
     N01 = 0
     N10 = 0
     N11 = 2
-    N = [N11, N10, N01, n-(N11+N10+N01)]
+    N = np.array([N11, N10, N01, n-(N11+N10+N01)])
     Z_all = nchoosem(n, m)
     tau_obs = n11/m - n01/(n-m)
     pval = pval_two(n, m, N, Z_all, tau_obs)
-    expected = 0.47368421052631576
-    assert pval == expected
+    expected_pval = 0.47368421052631576
+    np.testing.assert_equal(pval, expected_pval)
 
 
 def test_check_compatible():
@@ -77,12 +78,12 @@ def test_check_compatible():
     n10 = 4
     n01 = 4
     n00 = 6
-    N11 = [5, 6, 7]
-    N10 = [6, 7, 8]
-    N01 = [5, 7, 9]
+    N11 = np.array([5, 6, 7])
+    N10 = np.array([6, 7, 8])
+    N01 = np.array([5, 7, 9])
     compatible = check_compatible(n11, n10, n01, n00, N11, N10, N01)
-    expected = [True, True, False]
-    assert compatible == expected
+    expected_compatible = np.array([True, True, False])
+    np.testing.assert_array_equal(compatible, expected_compatible)
 
 
 def test_tau_lower_N11_oneside():
@@ -97,8 +98,9 @@ def test_tau_lower_N11_oneside():
     Z_all = nchoosem(n, m)
     alpha = 0.05
     N11_oneside = tau_lower_N11_oneside(n11, n10, n01, n00, N11, Z_all, alpha)
-    expected_N11_oneside = (-0.15, [10, 0, 3, 7])
-    assert N11_oneside == expected_N11_oneside
+    expected_N11_oneside = (-0.15, np.array([10, 0, 3, 7]))
+    np.testing.assert_equal(N11_oneside[0], expected_N11_oneside[0])
+    np.testing.assert_array_equal(N11_oneside[1], expected_N11_oneside[1])
 
 
 def test_tau_lower_oneside():
@@ -110,8 +112,10 @@ def test_tau_lower_oneside():
     alpha = 0.05
     nperm = 1000
     lower_oneside = tau_lower_oneside(n11, n10, n01, n00, alpha, nperm)
-    expected_lower_oneside = (-0.0625, 0.875, [1, 0, 1, 14])
-    assert lower_oneside == expected_lower_oneside
+    expected_lower_oneside = (-0.0625, 0.875, np.array([1, 0, 1, 14]))
+    np.testing.assert_equal(lower_oneside[0], expected_lower_oneside[0])
+    np.testing.assert_equal(lower_oneside[1], expected_lower_oneside[1])
+    np.testing.assert_array_equal(lower_oneside[2], expected_lower_oneside[2])
 
 
 def test_tau_lower_N11_twoside():
@@ -126,8 +130,12 @@ def test_tau_lower_N11_twoside():
     Z_all = nchoosem(n, m)
     alpha = 0.05
     N11_twoside = tau_lower_N11_twoside(n11, n10, n01, n00, N11, Z_all, alpha)
-    expected_N11_twoside = (-0.2, 0.2, [10, 0, 4, 6], [10, 4, 0, 6], 11)
-    assert N11_twoside == expected_N11_twoside
+    expected_N11_twoside = (-0.2, 0.2, np.array([10, 0, 4, 6]),
+                            np.array([10, 4, 0, 6]), 11)
+    np.testing.assert_equal(N11_twoside[0], expected_N11_twoside[0])
+    np.testing.assert_array_equal(N11_twoside[1], expected_N11_twoside[1])
+    np.testing.assert_equal(N11_twoside[2], expected_N11_twoside[2])
+    np.testing.assert_array_equal(N11_twoside[3], expected_N11_twoside[3])
 
 
 def test_tau_twoside_lower():
@@ -144,16 +152,30 @@ def test_tau_twoside_lower():
     reps = 1
     twoside_lower_exact = tau_twoside_lower(n11, n10, n01, n00, alpha, Z_all,
                                             exact, reps)
-    expected_twoside_lower_exact = (-0.0625, [1, 0, 1, 14], 0.375,
-                                    [0, 7, 1, 8], 48)
+    expected_twoside_lower_exact = (-0.0625, np.array([1, 0, 1, 14]), 0.375,
+                                    np.array([0, 7, 1, 8]), 48)
     exact = False
     reps = 20
     twoside_lower_notexact = tau_twoside_lower(n11, n10, n01, n00, alpha,
                                                Z_all, exact, reps)
-    expected_twoside_lower_notexact = (-0.0625, [1, 0, 1, 14], 0.375,
-                                       [0, 7, 1, 8], 33)
-    assert twoside_lower_exact == expected_twoside_lower_exact
-    assert twoside_lower_notexact == expected_twoside_lower_notexact
+    expected_twoside_lower_notexact = (-0.0625, np.array([1, 0, 1, 14]), 0.375,
+                                       np.array([0, 7, 1, 8]), 33)
+    np.testing.assert_equal(twoside_lower_exact[0],
+                            expected_twoside_lower_exact[0])
+    np.testing.assert_array_equal(twoside_lower_exact[1],
+                                  expected_twoside_lower_exact[1])
+    np.testing.assert_equal(twoside_lower_exact[2],
+                            expected_twoside_lower_exact[2])
+    np.testing.assert_array_equal(twoside_lower_exact[3],
+                                  expected_twoside_lower_exact[3])
+    np.testing.assert_equal(twoside_lower_notexact[0],
+                            expected_twoside_lower_notexact[0])
+    np.testing.assert_array_equal(twoside_lower_notexact[1],
+                                  expected_twoside_lower_notexact[1])
+    np.testing.assert_equal(twoside_lower_notexact[2],
+                            expected_twoside_lower_notexact[2])
+    np.testing.assert_array_equal(twoside_lower_notexact[3],
+                                  expected_twoside_lower_notexact[3])
 
 
 def test_tau_twoside_less_treated():
@@ -170,19 +192,34 @@ def test_tau_twoside_less_treated():
                                                           alpha, exact,
                                                           max_combinations,
                                                           reps)
-    expected_twoside_less_treated_exact = (-0.0625, 0.875, [1, 0, 1, 14],
-                                           [1, 14, 0, 1], 103)
+    expected_twoside_less_treated_exact = (-0.0625, 0.875,
+                                           np.array([1, 0, 1, 14]),
+                                           np.array([1, 14, 0, 1]), 103)
     exact = False
     reps = 20
     twoside_less_treated_notexact = tau_twoside_less_treated(n11, n10, n01,
                                                              n00, alpha, exact,
                                                              max_combinations,
                                                              reps)
-    expected_twoside_less_treated_notexact = (-0.0625, 0.875, [1, 0, 1, 14],
-                                              [1, 14, 0, 1], 60)
-    assert twoside_less_treated_exact == expected_twoside_less_treated_exact
-    assert (twoside_less_treated_notexact ==
-            expected_twoside_less_treated_notexact)
+    expected_twoside_less_treated_notexact = (-0.0625, 0.875,
+                                              np.array([1, 0, 1, 14]),
+                                              np.array([1, 14, 0, 1]), 60)
+    np.testing.assert_equal(twoside_less_treated_exact[0],
+                            expected_twoside_less_treated_exact[0])
+    np.testing.assert_equal(twoside_less_treated_exact[1],
+                            expected_twoside_less_treated_exact[1])
+    np.testing.assert_array_equal(twoside_less_treated_exact[2],
+                                  expected_twoside_less_treated_exact[2])
+    np.testing.assert_array_equal(twoside_less_treated_exact[3],
+                                  expected_twoside_less_treated_exact[3])
+    np.testing.assert_equal(twoside_less_treated_notexact[0],
+                            expected_twoside_less_treated_notexact[0])
+    np.testing.assert_equal(twoside_less_treated_notexact[1],
+                            expected_twoside_less_treated_notexact[1])
+    np.testing.assert_array_equal(twoside_less_treated_notexact[2],
+                                  expected_twoside_less_treated_notexact[2])
+    np.testing.assert_array_equal(twoside_less_treated_notexact[3],
+                                  expected_twoside_less_treated_notexact[3])
     with pytest.raises(Exception):
         tau_twoside_less_treated(n11, n10, n01, n00, alpha, True, 100, reps)
 
@@ -226,8 +263,8 @@ def test_lci():
     xx = np.arange(n+1)
     alpha = 0.05
     lcis = lci(xx, n, N, alpha)
-    expected_lcis = [0, 1, 3, 6, 9, 13, 17, 21, 27, 32, 39]
-    assert lcis == expected_lcis
+    expected_lcis = np.array([0, 1, 3, 6, 9, 13, 17, 21, 27, 32, 39])
+    np.testing.assert_array_equal(lcis, expected_lcis)
 
 
 def test_uci():
@@ -237,8 +274,8 @@ def test_uci():
     xx = np.arange(n+1)
     alpha = 0.05
     ucis = uci(xx, n, N, alpha)
-    expected_ucis = [11, 18, 23, 29, 33, 37, 41, 44, 47, 49, 50]
-    assert ucis == expected_ucis
+    expected_ucis = np.array([11, 18, 23, 29, 33, 37, 41, 44, 47, 49, 50])
+    np.testing.assert_array_equal(ucis, expected_ucis)
 
 
 def test_exact_CI_odd():
